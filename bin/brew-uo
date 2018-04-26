@@ -1,0 +1,8 @@
+#/!bin/bash
+
+brew update
+readonly OUTDATED=$(brew outdated)
+if [ -n "$OUTDATED" ]; then
+  echo "\e[34m==> \e[37;1m Outdated Formulae\e[m"
+  echo $OUTDATED
+fi
