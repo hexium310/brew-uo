@@ -3,6 +3,6 @@
 brew update
 readonly OUTDATED=$(brew outdated --verbose)
 if [ -n "$OUTDATED" ]; then
-  printf "\e[34m==> \e[37;1m Outdated Formulae\e[m\n"
+  printf "\e[34m==> \e[;1mOutdated Formulae\e[m\n"
   echo "$OUTDATED"
 fi
