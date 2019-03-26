@@ -4,5 +4,26 @@ brew update
 readonly OUTDATED=$(brew outdated --verbose)
 if [ -n "$OUTDATED" ]; then
   printf "\e[34m==> \e[;1mOutdated Formulae\e[m\n"
-  echo "$OUTDATED"
+  while read line; do
+    if [[ $line =~ (.*)[[:space:]]\((.*)\.(.*)\.(.*)\)[[:space:]]\<[[:space:]](.*)\.(.*)\.(.*) ]]; then
+      formula=${BASH_REMATCH[1]}
+      outdated_major=${BASH_REMATCH[2]}
+      outdated_minor=${BASH_REMATCH[3]}
+      outdated_patch=${BASH_REMATCH[4]}
+      current_major=${BASH_REMATCH[5]}
+      current_minor=${BASH_REMATCH[6]}
+      current_patch=${BASH_REMATCH[7]}
+      outdated_version="$outdated_major.$outdated_minor.$outdated_patch"
+
+      if [[ $current_major -gt $outdated_major ]]; then
+        printf "$formula ($outdated_version →  \e[31m$current_version.$current_minor.$current_patch\e[m)\n"
+      elif [[ $current_minor -gt $outdated_minor ]]; then
+        printf "$formula ($outdated_version →  $current_major.\e[34m$current_minor.$current_patch\e[m)\n"
+      else
+        printf "$formula ($outdated_version →  $current_major.$current_minor.\e[32m$current_patch\e[m)\n"
+      fi
+    fi
+  done << END
+$OUTDATED
+END
 fi
