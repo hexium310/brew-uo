@@ -1,5 +1,3 @@
-#![allow(unreachable_code)]
-#![cfg_attr(test, allow(unused_imports))]
 extern crate colored;
 extern crate regex;
 extern crate version_compare;
@@ -15,7 +13,6 @@ use itertools::Itertools;
 use itertools::EitherOrBoth::Both;
 use prettytable::{Table, format::consts::FORMAT_CLEAN};
 
-#[cfg(not(test))]
 fn main() {
     let update_result = {
         let result = Command::new("brew").arg("update").output().unwrap();
@@ -90,7 +87,6 @@ fn main() {
     table.printstd();
 }
 
-#[cfg(not(test))]
 fn colorize_update_result<'a>(target: &'a str) -> Result<String, String> {
     let info_regex = Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)").unwrap();
     let info = info_regex.captures_iter(target).map(|info_caps| (&info_caps[0]).to_owned()).collect::<Vec<String>>().join("\n");
@@ -144,13 +140,4 @@ fn build_table<'a>(objects: Vec<&'a str>) -> String {
     }).collect::<Vec<String>>().join("\n");
 
     output
-}
-
-#[cfg(test)]
-mod tests {
-    use super::build_table;
-
-    #[test]
-    fn test_build_table() {
-    }
 }
