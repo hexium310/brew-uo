@@ -94,14 +94,10 @@ fn colorize_update_result<'a>(target: &'a str) -> Result<String, String> {
     let pre_regex = Regex::new(r"==>").unwrap();
     let t = pre_regex.replace_all(target, "\n==>");
 
-
-    let list_regex = Regex::new(r"==> (?:New|Updated|Renamed|Deleted) Formulae\n(?:.+\n)+\n?").unwrap();
+    let list_regex = Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?").unwrap();
     let colored = list_regex.captures_iter(&t).map(|list_caps| {
-        let parts_regex = Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?").unwrap();
-        let parts_caps = parts_regex.captures(&list_caps[0]).unwrap();
-        let formulae = (&parts_caps[3]).split('\n').collect::<Vec<&str>>();
-        let formulae_list = build_table(formulae);
-        format!("\x1b[34m{}\x1b[0m \x1b[1m{}\x1b[0m\n{}", &parts_caps[1], &parts_caps[2], formulae_list).to_owned()
+        let formulae_list = build_table((&list_caps[3]).split('\n').collect::<Vec<&str>>());
+        format!("{} {}\n{}", &list_caps[1].blue(), &list_caps[2].bold(), formulae_list).to_owned()
     }).collect::<Vec<String>>().join("\n");
 
     Ok(format!("{}\n{}", info, colored).trim_end_matches('\n').to_owned())
