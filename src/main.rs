@@ -133,7 +133,7 @@ fn build_table<'a>(objects: Vec<&'a str>) -> String {
             }).collect::<Vec<String>>();
         let last = vec![objects[*item_indices_for_now.iter().last().unwrap()].to_owned()];
 
-        let mut out = Vec::new();
+        let mut out: Vec<String> = vec![];
         out.extend_from_slice(&first_n);
         out.extend_from_slice(&last);
         format!("{}", out.join(&gap_string))
