@@ -6,7 +6,7 @@ extern crate prettytable;
 extern crate term_size;
 
 use std::process::Command;
-use colored::*;
+use colored::{Colorize, Color};
 use regex::Regex;
 use version_compare::{Version, VersionCompare, CompOp};
 use itertools::Itertools;
@@ -66,9 +66,9 @@ fn main() {
                 latest_version_iter.by_ref().take(i).join("."),
                 latest_version_iter.join(".").color(
                     match i {
-                        0 => "red",
-                        1 => "blue",
-                        _ => "green",
+                        0 => Color::Red,
+                        1 => Color::Blue,
+                        _ => Color::Green,
                     }
                 ).to_string()
             ].iter().filter(|v| v.len() != 0).map(|v| v.to_owned()).collect::<Vec<String>>().join("."),
