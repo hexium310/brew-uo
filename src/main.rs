@@ -99,7 +99,8 @@ fn main() {
     let mut table_format = *FORMAT_CLEAN;
     table_format.padding(2, 2);
     table.set_format(table_format);
-    table.printstd();
+    let trim_regex = Regex::new("(?m)^ *").unwrap();
+    print!("{}", trim_regex.replace_all(&table.to_string(), ""));
 }
 
 fn colorize_update_result<'a>(target: &'a str) -> Result<String, String> {
