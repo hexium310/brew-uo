@@ -20,17 +20,12 @@ fn main() {
 
         colorize_update_result(&result_str).unwrap()
     };
-    println!("{}", update_result);
 
     let outdated_result = Command::new("brew")
         .args(&["outdated", "--verbose"])
         .output()
         .unwrap();
     let formulae = std::str::from_utf8(&outdated_result.stdout).unwrap_or("");
-
-    if formulae == "" {
-        return;
-    }
 
     let output = formulae.lines().map(|formula| {
         let mut splited_formula = formula.split_whitespace();
@@ -78,6 +73,26 @@ fn main() {
         format!("{},{},->,{}", name, current_version, colored_latest_version)
     });
 
+    let update_output = if !formulae.is_empty() {
+        let formulae_regex = Regex::new(&[
+            r"(^|\s)(?:(".to_owned(),
+            formulae.lines().map(|formula| {
+                let mut splited_formula = formula.split_whitespace();
+                let name = splited_formula.next().unwrap_or("");
+                name.to_owned()
+            }).collect::<Vec<String>>().join("|"),
+            ") ) ".to_owned(),
+        ].iter().filter(|&v| !v.is_empty()).map(|v| v.to_owned()).collect::<Vec<String>>().join("")).unwrap();
+
+        formulae_regex.replace_all(&update_result, "$1\x1b[1m$2\x1b[0m \x1b[32;1m✔\x1b[0m").into_owned()
+    } else {
+        update_result
+    };
+
+    println!("{}", update_output);
+    if formulae == "" {
+        return;
+    }
     println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
 
     let mut table = Table::from_csv_string(&output.collect::<Vec<String>>().join("\n")).unwrap();
