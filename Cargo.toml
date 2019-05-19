@@ -1,6 +1,6 @@
 [package]
 name = "brew-uo"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Hexin <hexium310@gmail.com>"]
 edition = "2018"
 
