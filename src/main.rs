@@ -75,13 +75,13 @@ fn main() {
 
     let update_output = if !formulae.is_empty() {
         let formulae_regex = Regex::new(&[
-            r"(^|\s)(?:(".to_owned(),
+            r"(?m)(^|\s)(".to_owned(),
             formulae.lines().map(|formula| {
                 let mut splited_formula = formula.split_whitespace();
                 let name = splited_formula.next().unwrap_or("");
                 name.to_owned()
             }).collect::<Vec<String>>().join("|"),
-            ") ) ".to_owned(),
+            ")(?:  |$)".to_owned(),
         ].iter().filter(|&v| !v.is_empty()).map(|v| v.to_owned()).collect::<Vec<String>>().join("")).unwrap();
 
         formulae_regex.replace_all(&update_result, "$1\x1b[1m$2\x1b[0m \x1b[32;1m✔\x1b[0m").into_owned()
