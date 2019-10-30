@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 colored = "1.8"
 regex = "1"
-version-compare = "0.0.8"
+version-compare = "0.0.10"
 itertools = "0.8"
 prettytable-rs = "0.8"
 term_size = "0.3"
