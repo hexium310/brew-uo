@@ -16,7 +16,7 @@ use version_compare::{CompOp, Version, VersionCompare};
 fn main() {
     let update_result = {
         let result = Command::new("brew").arg("update").output().unwrap();
-        let result_str = String::from_utf8(result.stdout).unwrap_or("".to_owned());
+        let result_str = String::from_utf8(result.stdout).unwrap_or_else(|_| "".to_owned());
 
         colorize_update_result(&result_str).unwrap()
     };
@@ -59,7 +59,7 @@ fn main() {
                     .to_string(),
             ]
             .iter()
-            .filter(|v| v.len() != 0)
+            .filter(|v| !v.is_empty())
             .map(|v| v.to_owned())
             .collect::<Vec<String>>()
             .join("."),
@@ -113,7 +113,7 @@ fn main() {
     print!("{}", trim_regex.replace_all(&table.to_string(), ""));
 }
 
-fn colorize_update_result<'a>(target: &'a str) -> Result<String, String> {
+fn colorize_update_result(target: &str) -> Result<String, String> {
     let info_regex = Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)").unwrap();
     let info = info_regex
         .captures_iter(target)
@@ -121,8 +121,7 @@ fn colorize_update_result<'a>(target: &'a str) -> Result<String, String> {
         .collect::<Vec<String>>()
         .join("\n");
 
-    let pre_regex = Regex::new(r"==>").unwrap();
-    let t = pre_regex.replace_all(target, "\n==>");
+    let t = target.replace("==>", "\n==>");
 
     let list_regex = Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?").unwrap();
     let colored = list_regex
@@ -137,7 +136,7 @@ fn colorize_update_result<'a>(target: &'a str) -> Result<String, String> {
     Ok(format!("{}\n{}", info, colored).trim_end_matches('\n').to_owned())
 }
 
-fn build_table<'a>(objects: Vec<&'a str>) -> String {
+fn build_table(objects: Vec<&str>) -> String {
     let gap_size = 2;
     let (terminal_width, _) = term_size::dimensions().unwrap();
     let object_lengths = objects.iter().map(|object| object.len()).collect::<Vec<usize>>();
@@ -152,10 +151,9 @@ fn build_table<'a>(objects: Vec<&'a str>) -> String {
     let col_width = (terminal_width + gap_size) / cols - gap_size;
 
     let gap_string = " ".repeat(gap_size);
-    let output = (0..rows)
+    (0..rows)
         .map(|row_index| {
             let item_indices_for_now = (row_index..(objects.len() - 1))
-                .into_iter()
                 .step_by(rows)
                 .collect::<Vec<usize>>();
             let item_indices_for_now_len = item_indices_for_now.len();
@@ -169,10 +167,9 @@ fn build_table<'a>(objects: Vec<&'a str>) -> String {
             let mut out: Vec<String> = vec![];
             out.extend_from_slice(&first_n);
             out.extend_from_slice(&last);
-            format!("{}", out.join(&gap_string))
+            out.join(&gap_string).to_string()
         })
         .collect::<Vec<String>>()
-        .join("\n");
+        .join("\n")
 
-    output
 }
