@@ -40,41 +40,7 @@ fn build_outdated_csv(outdated_result: &str) -> String {
                 .unwrap();
             let name = &captures[1];
             let current_versions = &captures[2].split(", ").collect::<Vec<_>>();
-            let newest_current_version = Version::from(current_versions.last().unwrap()).unwrap();
-            let latest_version = Version::from(&captures[3]).unwrap();
-            let latest_version_parts = latest_version.parts();
-
-            let different_part_position = latest_version_parts
-                .iter()
-                .zip_longest(newest_current_version.parts().iter())
-                .position(|v| match v {
-                    Both(left, right) => {
-                        VersionCompare::compare_to(&left.to_string(), &right.to_string(), &CompOp::Ne).unwrap()
-                    },
-                    _ => true,
-                });
-
-            let colored_latest_version = match different_part_position {
-                Some(position) => {
-                    let latest_version_parts_without_change = latest_version_parts.iter().take(position).join(".");
-                    let latest_version_parts_with_change = latest_version_parts
-                        .iter()
-                        .skip(position)
-                        .join(".")
-                        .color(match position {
-                            0 => Color::Red,
-                            1 => Color::Blue,
-                            _ => Color::Green,
-                        })
-                        .to_string();
-
-                    format!(
-                        "{}.{}",
-                        latest_version_parts_without_change, latest_version_parts_with_change
-                    )
-                },
-                None => latest_version.to_string(),
-            };
+            let colored_latest_version = colorize_latest_version(current_versions, &captures[3]);
 
             format!(
                 "{},\"{}\",->,{}",
@@ -162,6 +128,38 @@ fn build_updates_list(formulae: Vec<&str>, outdated_list: &[&str]) -> String {
         .join("\n")
 }
 
+fn colorize_latest_version(current_versions: &[&str], latest_version_str: &str) -> String {
+    Version::from(latest_version_str).map_or_else(
+        || latest_version_str.to_owned(),
+        |latest_version| {
+            let latest_version_parts = latest_version.parts();
+            let different_part_position = find_different_part_position(current_versions, latest_version_parts);
+
+            different_part_position.map_or_else(
+                || latest_version.to_string(),
+                |position| {
+                    let latest_version_parts_without_change = latest_version_parts.iter().take(position).join(".");
+                    let latest_version_parts_with_change = latest_version_parts
+                        .iter()
+                        .skip(position)
+                        .join(".")
+                        .color(match position {
+                            0 => Color::Red,
+                            1 => Color::Blue,
+                            _ => Color::Green,
+                        })
+                        .to_string();
+
+                    format!(
+                        "{}.{}",
+                        latest_version_parts_without_change, latest_version_parts_with_change
+                    )
+                }
+            )
+        },
+    )
+}
+
 fn colorize_updates_list(command_result: &str, outdated_list: &[&str]) -> String {
     Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?")
         .unwrap()
@@ -181,6 +179,26 @@ fn extract_update_message(command_result: &str) -> String {
         .map(|captures| (&captures[0]).to_owned())
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn find_different_part_position(
+    current_versions: &[&str],
+    latest_version_parts: &[version_compare::VersionPart],
+) -> Option<usize> {
+    Version::from(current_versions.last().unwrap()).map_or_else(
+        || Some(1),
+        |newest_current_version| {
+            latest_version_parts
+                .iter()
+                .zip_longest(newest_current_version.parts().iter())
+                .position(|v| match v {
+                    Both(left, right) => {
+                        VersionCompare::compare_to(&left.to_string(), &right.to_string(), &CompOp::Ne).unwrap()
+                    },
+                    _ => true,
+                })
+        },
+    )
 }
 
 fn run_outdated() -> String {
