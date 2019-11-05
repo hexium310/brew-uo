@@ -8,168 +8,191 @@ extern crate version_compare;
 use colored::{Color, Colorize};
 use itertools::EitherOrBoth::Both;
 use itertools::Itertools;
-use prettytable::{format::consts::FORMAT_CLEAN, Table};
+use prettytable::{format, Table};
 use regex::Regex;
-use std::process::Command;
+use std::process::{exit, Command};
 use version_compare::{CompOp, Version, VersionCompare};
 
 fn main() {
-    let update_result = {
-        let result = Command::new("brew").arg("update").output().unwrap();
-        let result_str = String::from_utf8(result.stdout).unwrap_or_else(|_| "".to_owned());
-
-        colorize_update_result(&result_str).unwrap()
-    };
-
-    let outdated_result = Command::new("brew").args(&["outdated", "--verbose"]).output().unwrap();
-    let formulae = std::str::from_utf8(&outdated_result.stdout).unwrap_or("");
-
-    let output = formulae.lines().map(|formula| {
-        let mut splited_formula = formula.split_whitespace();
-        let re = Regex::new(r"\((.*)\)").unwrap();
-        let (name, current, latest) = (
-            splited_formula.next().unwrap_or(""),
-            &re.replace(splited_formula.next().unwrap_or(""), "$1"),
-            splited_formula.last().unwrap_or(""),
-        );
-        let current_version = Version::from(current).unwrap();
-        let latest_version = Version::from(latest).unwrap();
-
-        let current_version_iter = current_version.parts().iter();
-        let mut latest_version_iter = latest_version.parts().iter();
-
-        let index = latest_version_iter
-            .clone()
-            .zip_longest(current_version_iter)
-            .position(|v| match v {
-                Both(left, right) => VersionCompare::compare(&left.to_string(), &right.to_string()) != Ok(CompOp::Eq),
-                _ => true,
-            });
-
-        let colored_latest_version = match index {
-            Some(i) => [
-                latest_version_iter.by_ref().take(i).join("."),
-                latest_version_iter
-                    .join(".")
-                    .color(match i {
-                        0 => Color::Red,
-                        1 => Color::Blue,
-                        _ => Color::Green,
-                    })
-                    .to_string(),
-            ]
-            .iter()
-            .filter(|v| !v.is_empty())
-            .map(|v| v.to_owned())
-            .collect::<Vec<String>>()
-            .join("."),
-            None => latest_version.to_string(),
-        };
-
-        format!("{},{},->,{}", name, current_version, colored_latest_version)
-    });
-
-    let update_output = if !formulae.is_empty() {
-        let formulae_regex = Regex::new(
-            &[
-                r"(?m)(^|\s)(".to_owned(),
-                formulae
-                    .lines()
-                    .map(|formula| {
-                        let mut splited_formula = formula.split_whitespace();
-                        let name = splited_formula.next().unwrap_or("");
-                        name.to_owned()
-                    })
-                    .collect::<Vec<String>>()
-                    .join("|"),
-                ")(?:  |$)".to_owned(),
-            ]
-            .iter()
-            .filter(|&v| !v.is_empty())
-            .map(|v| v.to_owned())
-            .collect::<Vec<String>>()
-            .join(""),
-        )
-        .unwrap();
-
-        formulae_regex
-            .replace_all(&update_result, "$1\x1b[1m$2\x1b[0m \x1b[32;1m✔\x1b[0m")
-            .into_owned()
-    } else {
-        update_result
-    };
+    let update_result = run_update();
+    let outdated_result = run_outdated();
+    let update_output = build_updates_output(&update_result, &outdated_result);
 
     println!("{}", update_output);
-    if formulae == "" {
-        return;
+
+    if outdated_result.is_empty() {
+        exit(0);
     }
+
+    let outdated_output = build_outdated_output(&outdated_result);
+
     println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
-
-    let mut table = Table::from_csv_string(&output.collect::<Vec<String>>().join("\n")).unwrap();
-    let mut table_format = *FORMAT_CLEAN;
-    table_format.padding(2, 2);
-    table.set_format(table_format);
-    let trim_regex = Regex::new("(?m)^ *").unwrap();
-    print!("{}", trim_regex.replace_all(&table.to_string(), ""));
+    print!("{}", outdated_output);
 }
 
-fn colorize_update_result(target: &str) -> Result<String, String> {
-    let info_regex = Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)").unwrap();
-    let info = info_regex
-        .captures_iter(target)
-        .map(|info_caps| (&info_caps[0]).to_owned())
-        .collect::<Vec<String>>()
-        .join("\n");
+fn build_outdated_csv(outdated_result: &str) -> String {
+    outdated_result
+        .lines()
+        .map(|formula| {
+            let captures = Regex::new(r"(.+)\s\((.+)\)\s<\s(.+)")
+                .unwrap()
+                .captures(formula)
+                .unwrap();
+            let name = &captures[1];
+            let current_versions = &captures[2].split(", ").collect::<Vec<_>>();
+            let newest_current_version = Version::from(current_versions.last().unwrap()).unwrap();
+            let latest_version = Version::from(&captures[3]).unwrap();
+            let latest_version_parts = latest_version.parts();
 
-    let t = target.replace("==>", "\n==>");
+            let different_part_position = latest_version_parts
+                .iter()
+                .zip_longest(newest_current_version.parts().iter())
+                .position(|v| match v {
+                    Both(left, right) => {
+                        VersionCompare::compare_to(&left.to_string(), &right.to_string(), &CompOp::Ne).unwrap()
+                    },
+                    _ => true,
+                });
 
-    let list_regex = Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?").unwrap();
-    let colored = list_regex
-        .captures_iter(&t)
-        .map(|list_caps| {
-            let formulae_list = build_table((&list_caps[3]).split('\n').collect::<Vec<&str>>());
-            format!("{} {}\n{}", &list_caps[1].blue(), &list_caps[2].bold(), formulae_list).to_owned()
+            let colored_latest_version = match different_part_position {
+                Some(position) => {
+                    let latest_version_parts_without_change = latest_version_parts.iter().take(position).join(".");
+                    let latest_version_parts_with_change = latest_version_parts
+                        .iter()
+                        .skip(position)
+                        .join(".")
+                        .color(match position {
+                            0 => Color::Red,
+                            1 => Color::Blue,
+                            _ => Color::Green,
+                        })
+                        .to_string();
+
+                    format!(
+                        "{}.{}",
+                        latest_version_parts_without_change, latest_version_parts_with_change
+                    )
+                },
+                None => latest_version.to_string(),
+            };
+
+            format!(
+                "{},\"{}\",->,{}",
+                name,
+                current_versions.join(", "),
+                colored_latest_version
+            )
         })
-        .collect::<Vec<String>>()
-        .join("\n");
-
-    Ok(format!("{}\n{}", info, colored).trim_end_matches('\n').to_owned())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
-fn build_table(objects: Vec<&str>) -> String {
-    let gap_size = 2;
-    let (terminal_width, _) = term_size::dimensions().unwrap();
-    let object_lengths = objects.iter().map(|object| object.len()).collect::<Vec<usize>>();
-    let columns = (terminal_width + gap_size) / (object_lengths.iter().max().unwrap_or(&0) + gap_size);
+fn build_outdated_output(outdated_result: &str) -> String {
+    let outdated_result_csv = build_outdated_csv(outdated_result);
+    let mut tabulated_outdated_output = Table::from_csv_string(&outdated_result_csv).unwrap();
+    let table_format = format::FormatBuilder::new().padding(0, 4).build();
+    tabulated_outdated_output.set_format(table_format);
 
-    if objects == vec![""] || columns < 2 {
-        return objects.join("\n");
+    tabulated_outdated_output.to_string()
+}
+
+fn build_updates_output(update_result: &str, outdated_result: &str) -> String {
+    let message = extract_update_message(update_result);
+    let outdated_list = outdated_result
+        .lines()
+        .map(|formula| {
+            let a = formula.split_whitespace().collect::<Vec<_>>();
+            a.first().unwrap().to_owned()
+        })
+        .collect::<Vec<_>>();
+    let list = colorize_updates_list(update_result, &outdated_list);
+
+    format!("{}\n{}", message, list).trim_end_matches('\n').to_owned()
+}
+
+fn build_updates_list(formulae: Vec<&str>, outdated_list: &[&str]) -> String {
+    if formulae == vec![""] {
+        return "".to_owned();
     }
 
-    let rows = (objects.len() + columns - 1) / columns;
-    let cols = (objects.len() + rows - 1) / rows;
-    let col_width = (terminal_width + gap_size) / cols - gap_size;
-
+    let gap_size = 2;
     let gap_string = " ".repeat(gap_size);
-    (0..rows)
-        .map(|row_index| {
-            let item_indices_for_now = (row_index..(objects.len() - 1))
-                .step_by(rows)
-                .collect::<Vec<usize>>();
-            let item_indices_for_now_len = item_indices_for_now.len();
+    let formulae_length = formulae.len();
+    let (terminal_width, _) = term_size::dimensions().unwrap();
+    let formula_name_lengths = formulae.iter().map(|formula| formula.len()).collect::<Vec<usize>>();
+    let column_number = (terminal_width + gap_size) / (formula_name_lengths.iter().max().unwrap_or(&0) + gap_size);
 
-            let first_n = &item_indices_for_now[..(item_indices_for_now_len - 1)]
-                .iter()
-                .map(|index| format!("{}{}", objects[*index], " ".repeat(col_width - object_lengths[*index])))
-                .collect::<Vec<String>>();
-            let last = vec![objects[*item_indices_for_now.iter().last().unwrap()].to_owned()];
+    if column_number < 2 {
+        return formulae.join("\n");
+    }
 
-            let mut out: Vec<String> = vec![];
-            out.extend_from_slice(&first_n);
-            out.extend_from_slice(&last);
-            out.join(&gap_string).to_string()
+    let row_number = (formulae_length + column_number - 1) / column_number;
+    let column_width = (terminal_width + gap_size) / ((formulae_length + row_number - 1) / row_number) - gap_size;
+
+    (0..row_number)
+        .map(|nth_row| {
+            let row_item_indices = (nth_row..(formulae_length - 1)).step_by(row_number);
+
+            row_item_indices
+                .clone()
+                .enumerate()
+                .map(|(index, formula_index)| {
+                    let formula_default = formulae[formula_index];
+                    let padding = if index != row_item_indices.len() - 1 {
+                        " ".repeat(column_width - formula_name_lengths[formula_index])
+                    } else {
+                        "  ".to_owned()
+                    };
+
+                    let (formula, padding_with_checkmark) = if outdated_list.iter().any(|&v| v == formula_default) {
+                        (
+                            formula_default.bold().to_string(),
+                            padding.replacen("  ", &" ✔".green().to_string(), 1),
+                        )
+                    } else {
+                        (formula_default.to_owned(), padding)
+                    };
+
+                    format!("{}{}", formula, padding_with_checkmark)
+                })
+                .collect::<Vec<_>>()
+                .join(&gap_string)
         })
-        .collect::<Vec<String>>()
+        .collect::<Vec<_>>()
         .join("\n")
+}
 
+fn colorize_updates_list(command_result: &str, outdated_list: &[&str]) -> String {
+    Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?")
+        .unwrap()
+        .captures_iter(&command_result.replace("==>", "\n==>"))
+        .map(|captures| {
+            let list = build_updates_list((&captures[3]).split('\n').collect(), outdated_list);
+            format!("{} {}\n{}", &(captures[1]).blue(), &(captures[2]).bold(), list)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn extract_update_message(command_result: &str) -> String {
+    Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)")
+        .unwrap()
+        .captures_iter(command_result)
+        .map(|captures| (&captures[0]).to_owned())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn run_outdated() -> String {
+    let result = Command::new("brew").args(&["outdated", "--verbose"]).output().unwrap();
+    stringify(result.stdout)
+}
+
+fn run_update() -> String {
+    let result = Command::new("brew").arg("update").output().unwrap();
+    stringify(result.stdout)
+}
+
+fn stringify(value: Vec<u8>) -> String {
+    String::from_utf8(value).unwrap_or_else(|_| "".to_owned())
 }
