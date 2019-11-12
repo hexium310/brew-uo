@@ -6,7 +6,7 @@ extern crate term_size;
 extern crate version_compare;
 
 use colored::{Color, Colorize};
-use itertools::EitherOrBoth::Both;
+use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
 use prettytable::{format, Table};
 use regex::Regex;
@@ -128,7 +128,48 @@ fn build_updates_list(formulae: Vec<&str>, outdated_list: &[&str]) -> String {
         .join("\n")
 }
 
+fn build_version(version_parts: &[version_compare::VersionPart], delimiter: &[String]) -> String {
+    let zipped = version_parts
+        .iter()
+        .map(|v| v.to_string())
+        .zip_longest(delimiter.iter().map(|v| v.to_owned()));
+
+    zipped
+        .clone()
+        .fold(
+            Vec::with_capacity(zipped.len() * 2) as Vec<String>,
+            |mut accumulator, tuple| match tuple {
+                Both(part, delimiter) => {
+                    accumulator.push(part);
+                    accumulator.push(delimiter);
+                    accumulator
+                },
+                Left(part) => {
+                    accumulator.push(part);
+                    accumulator
+                },
+                _ => accumulator,
+            },
+        )
+        .join("")
+}
+
+fn get_delimiters(version_str: &str) -> Vec<String> {
+    let delimiter_chars = ['.', '_'];
+
+    version_str
+        .matches(|version_char| {
+            delimiter_chars
+                .iter()
+                .any(|&delimiter_char| delimiter_char == version_char)
+        })
+        .map(|v| v.to_owned())
+        .collect::<Vec<_>>()
+}
+
 fn colorize_latest_version(current_versions: &[&str], latest_version_str: &str) -> String {
+    let delimiters = get_delimiters(latest_version_str);
+
     Version::from(latest_version_str).map_or_else(
         || latest_version_str.to_owned(),
         |latest_version| {
@@ -138,23 +179,22 @@ fn colorize_latest_version(current_versions: &[&str], latest_version_str: &str) 
             different_part_position.map_or_else(
                 || latest_version.to_string(),
                 |position| {
-                    let latest_version_parts_without_change = latest_version_parts.iter().take(position).join(".");
-                    let latest_version_parts_with_change = latest_version_parts
-                        .iter()
-                        .skip(position)
-                        .join(".")
-                        .color(match position {
-                            0 => Color::Red,
-                            1 => Color::Blue,
-                            _ => Color::Green,
-                        })
-                        .to_string();
+                    let latest_version_parts_without_change =
+                        build_version(&latest_version_parts[..position], &delimiters[..position - 1]);
+                    let latest_version_parts_with_change =
+                        build_version(&latest_version_parts[position..], &delimiters[position..])
+                            .color(match position {
+                                0 => Color::Red,
+                                1 => Color::Blue,
+                                _ => Color::Green,
+                            })
+                            .to_string();
 
                     format!(
                         "{}.{}",
                         latest_version_parts_without_change, latest_version_parts_with_change
                     )
-                }
+                },
             )
         },
     )
