@@ -66,10 +66,7 @@ fn build_updates_output(update_result: &str, outdated_result: &str) -> String {
     let message = extract_update_message(update_result);
     let outdated_list = outdated_result
         .lines()
-        .map(|formula| {
-            let a = formula.split_whitespace().collect::<Vec<_>>();
-            a.first().unwrap().to_owned()
-        })
+        .map(|formula| formula.split_whitespace().next().unwrap())
         .collect::<Vec<_>>();
     let list = colorize_updates_list(update_result, &outdated_list);
 
