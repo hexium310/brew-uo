@@ -13,6 +13,19 @@ use regex::Regex;
 use std::process::{exit, Command};
 use version_compare::{CompOp, Version, VersionCompare};
 
+trait Terminal {
+    fn get_width(&self) -> Result<usize, String> {
+        let (width, _) = term_size::dimensions().ok_or_else(|| "Can not get the terminal size.".to_owned())?;
+
+        Ok(width)
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+struct TerminalInfo {}
+
+impl Terminal for TerminalInfo {}
+
 fn main() {
     let update_result = run_update();
     let outdated_result = run_outdated();
@@ -73,7 +86,7 @@ fn build_updates_output(update_result: &str, outdated_result: &str) -> String {
     format!("{}\n{}", message, list).trim_end_matches('\n').to_owned()
 }
 
-fn build_updates_list(formulae: Vec<&str>, outdated_list: &[&str]) -> String {
+fn build_updates_list<T: Terminal>(formulae: Vec<&str>, outdated_list: &[&str], terminal_info: T) -> String {
     if formulae == vec![""] {
         return "".to_owned();
     }
@@ -81,7 +94,11 @@ fn build_updates_list(formulae: Vec<&str>, outdated_list: &[&str]) -> String {
     let gap_size = 2;
     let gap_string = " ".repeat(gap_size);
     let formulae_length = formulae.len();
-    let (terminal_width, _) = term_size::dimensions().unwrap();
+    let terminal_width = terminal_info.get_width().unwrap_or_else(|err| {
+        println!("Warning: {}", err);
+
+        0
+    });
     let formula_name_lengths = formulae.iter().map(|formula| formula.len()).collect::<Vec<usize>>();
     let column_number = (terminal_width + gap_size) / (formula_name_lengths.iter().max().unwrap_or(&0) + gap_size);
 
@@ -198,11 +215,13 @@ fn colorize_latest_version(current_versions: &[&str], latest_version_str: &str) 
 }
 
 fn colorize_updates_list(command_result: &str, outdated_list: &[&str]) -> String {
+    let terminal_info = TerminalInfo {};
+
     Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?")
         .unwrap()
         .captures_iter(&command_result.replace("==>", "\n==>"))
         .map(|captures| {
-            let list = build_updates_list((&captures[3]).split('\n').collect(), outdated_list);
+            let list = build_updates_list((&captures[3]).split('\n').collect(), outdated_list, terminal_info);
             format!("{} {}\n{}", &(captures[1]).blue(), &(captures[2]).bold(), list)
         })
         .collect::<Vec<_>>()
