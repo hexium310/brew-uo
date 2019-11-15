@@ -205,8 +205,10 @@ fn colorize_latest_version(current_versions: &[&str], latest_version_str: &str) 
                             .to_string();
 
                     format!(
-                        "{}.{}",
-                        latest_version_parts_without_change, latest_version_parts_with_change
+                        "{}{}{}",
+                        latest_version_parts_without_change,
+                        delimiters[position - 1],
+                        latest_version_parts_with_change,
                     )
                 },
             )
