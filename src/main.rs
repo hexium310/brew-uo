@@ -5,31 +5,24 @@ extern crate regex;
 extern crate term_size;
 extern crate version_compare;
 
+mod brew;
+mod terminal;
+
+use brew::*;
 use colored::{Color, Colorize};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
 use prettytable::{format, Table};
 use regex::Regex;
 use std::process::{exit, Command};
+use terminal::*;
 use version_compare::{CompOp, Version, VersionCompare};
-
-trait Terminal {
-    fn get_width(&self) -> Result<usize, String> {
-        let (width, _) = term_size::dimensions().ok_or_else(|| "Can not get the terminal size.".to_owned())?;
-
-        Ok(width)
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-struct TerminalInfo {}
-
-impl Terminal for TerminalInfo {}
 
 fn main() {
     let update_result = run_update();
     let outdated_result = run_outdated();
-    let update_output = build_updates_output(&update_result, &outdated_result);
+    let brew = Brew::new(&update_result, &outdated_result);
+    let update_output = BrewUpdate::parse(&brew).unwrap();
 
     println!("{}", update_output);
 
@@ -75,18 +68,18 @@ fn build_outdated_output(outdated_result: &str) -> String {
     tabulated_outdated_output.to_string()
 }
 
-fn build_updates_output(update_result: &str, outdated_result: &str) -> String {
-    let message = extract_update_message(update_result);
-    let outdated_list = outdated_result
-        .lines()
-        .map(|formula| formula.split_whitespace().next().unwrap())
-        .collect::<Vec<_>>();
-    let list = colorize_updates_list(update_result, &outdated_list);
+// fn build_updates_output(update_result: &str, outdated_result: &str) -> String {
+//     let message = extract_update_message(update_result);
+//     let outdated_list = outdated_result
+//         .lines()
+//         .map(|formula| formula.split_whitespace().next().unwrap())
+//         .collect::<Vec<_>>();
+//     let list = colorize_updates_list(update_result, &outdated_list);
+//
+//     format!("{}\n{}", message, list).trim_end_matches('\n').to_owned()
+// }
 
-    format!("{}\n{}", message, list).trim_end_matches('\n').to_owned()
-}
-
-fn build_updates_list<T: Terminal>(formulae: Vec<&str>, outdated_list: &[&str], terminal_info: T) -> String {
+fn build_updates_list<T: Terminal>(formulae: Vec<&str>, outdated_list: &[&str], terminal_info: &T) -> String {
     if formulae == vec![""] {
         return "".to_owned();
     }
@@ -94,7 +87,7 @@ fn build_updates_list<T: Terminal>(formulae: Vec<&str>, outdated_list: &[&str], 
     let gap_size = 2;
     let gap_string = " ".repeat(gap_size);
     let formulae_length = formulae.len();
-    let terminal_width = terminal_info.get_width().unwrap_or_else(|err| {
+    let terminal_width = terminal_info.width().unwrap_or_else(|err| {
         println!("Warning: {}", err);
 
         0
@@ -223,21 +216,13 @@ fn colorize_updates_list(command_result: &str, outdated_list: &[&str]) -> String
         .unwrap()
         .captures_iter(&command_result.replace("==>", "\n==>"))
         .map(|captures| {
-            let list = build_updates_list((&captures[3]).split('\n').collect(), outdated_list, terminal_info);
+            let list = build_updates_list((&captures[3]).split('\n').collect(), outdated_list, &terminal_info);
             format!("{} {}\n{}", &(captures[1]).blue(), &(captures[2]).bold(), list)
         })
         .collect::<Vec<_>>()
         .join("\n")
 }
 
-fn extract_update_message(command_result: &str) -> String {
-    Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)")
-        .unwrap()
-        .captures_iter(command_result)
-        .map(|captures| (&captures[0]).to_owned())
-        .collect::<Vec<_>>()
-        .join("\n")
-}
 
 fn find_different_part_position(
     current_versions: &[&str],
@@ -273,108 +258,108 @@ fn stringify(value: Vec<u8>) -> String {
     String::from_utf8(value).unwrap_or_else(|_| "".to_owned())
 }
 
-#[test]
-#[ignore]
-fn test() {
-    let update = r#"Updated 1 tap (homebrew/core).
-        ==> Updated Formulae
-di
-django-completion
-eprover
-fluid-synth
-gdcm
-gmic
-hypre
-i2p
-imapfilter
-jruby
-paket
-balena-cli
-cfssl
-cmatrix
-drafter
-gnunet
-go
-go@1.12
-godep
-re2
-shared-mime-info
-vagrant-completion
-xcodegen"#;
-
-    let outdated = r#"go (1.13.3) < 1.13.4
-python (3.7.4_1) < 3.7.5
-di (1.1) < 1.2
-re2 (1.1) < 1.2
-godep (1.1) < 1.2
-django-completion (1.1) < 1.2
-eprover (1.1) < 1.2
-fluid-synth (1.1) < 1.2
-gdcm (1.1) < 1.2
-gmic (1.1) < 1.2
-jruby (1.1) < 1.2_1
-vagrant-completion (1.1) < 1.2
-python-yq (2.7.2) < 2.8.1"#;
-
-    println!("{}", build_updates_output(update, outdated));
-    println!("{}", build_outdated_output(outdated));
-}
-
-#[test]
-#[ignore]
-fn test2() {
-    let outdated = r#"go (1.13.3) < 1.13.4
-python (3.7.4_1) < 3.7.5
-di (1.1) < 1.2
-re2 (1.1) < 1.2
-godep (1.1) < 1.2
-django-completion (1.1) < 1.2
-eprover (1.1) < 1.2
-fluid-synth (1.1) < 1.2
-gdcm (1.1) < 1.2
-gmic (1.1) < 1.2
-jruby (1.0, 1.1) < 1.2
-vagrant-completion (1.1) < 1.2
-python-yq (2.7.2) < 2.8.1"#;
-
-    let a = build_outdated_output(outdated);
-    println!("{}", a);
-}
-
-#[test]
-#[ignore]
-fn test3() {
-    let outdated = r#"go (1.13.3) < 1.13.4
-python (3.7.4_1) < 3.7.5
-jruby (1.1) < 1.2_1
-jruby (1.1_1) < 1.2_1
-x264 (r2917) < r2917_1
-x264 (r2917_1) < r2917
-x264 (r2917) < r2917
-python-yq (2.7.2) < 2.8.1"#;
-
-    println!("{}", build_outdated_output(outdated));
-}
-
-#[test]
-fn test4() {
-    let update = r#"di
-django-completion
-eprover"#;
-    let outdated = vec![""];
-
-    struct Mock {};
-    impl Terminal for Mock {
-        fn get_width(&self) -> Result<usize, String> {
-            Err("Can not get the terminal size.".to_owned())
-        }
-    }
-    let terminal_info = Mock {};
-    println!(
-        "{}",
-        build_updates_list(update.split('\n').collect(), &outdated, terminal_info)
-    );
-}
+// #[test]
+// #[ignore]
+// fn test() {
+//     let update = r#"Updated 1 tap (homebrew/core).
+//         ==> Updated Formulae
+// di
+// django-completion
+// eprover
+// fluid-synth
+// gdcm
+// gmic
+// hypre
+// i2p
+// imapfilter
+// jruby
+// paket
+// balena-cli
+// cfssl
+// cmatrix
+// drafter
+// gnunet
+// go
+// go@1.12
+// godep
+// re2
+// shared-mime-info
+// vagrant-completion
+// xcodegen"#;
+//
+//     let outdated = r#"go (1.13.3) < 1.13.4
+// python (3.7.4_1) < 3.7.5
+// di (1.1) < 1.2
+// re2 (1.1) < 1.2
+// godep (1.1) < 1.2
+// django-completion (1.1) < 1.2
+// eprover (1.1) < 1.2
+// fluid-synth (1.1) < 1.2
+// gdcm (1.1) < 1.2
+// gmic (1.1) < 1.2
+// jruby (1.1) < 1.2_1
+// vagrant-completion (1.1) < 1.2
+// python-yq (2.7.2) < 2.8.1"#;
+//
+//     println!("{}", build_updates_output(update, outdated));
+//     println!("{}", build_outdated_output(outdated));
+// }
+//
+// #[test]
+// #[ignore]
+// fn test2() {
+//     let outdated = r#"go (1.13.3) < 1.13.4
+// python (3.7.4_1) < 3.7.5
+// di (1.1) < 1.2
+// re2 (1.1) < 1.2
+// godep (1.1) < 1.2
+// django-completion (1.1) < 1.2
+// eprover (1.1) < 1.2
+// fluid-synth (1.1) < 1.2
+// gdcm (1.1) < 1.2
+// gmic (1.1) < 1.2
+// jruby (1.0, 1.1) < 1.2
+// vagrant-completion (1.1) < 1.2
+// python-yq (2.7.2) < 2.8.1"#;
+//
+//     let a = build_outdated_output(outdated);
+//     println!("{}", a);
+// }
+//
+// #[test]
+// #[ignore]
+// fn test3() {
+//     let outdated = r#"go (1.13.3) < 1.13.4
+// python (3.7.4_1) < 3.7.5
+// jruby (1.1) < 1.2_1
+// jruby (1.1_1) < 1.2_1
+// x264 (r2917) < r2917_1
+// x264 (r2917_1) < r2917
+// x264 (r2917) < r2917
+// python-yq (2.7.2) < 2.8.1"#;
+//
+//     println!("{}", build_outdated_output(outdated));
+// }
+//
+// #[test]
+// fn test4() {
+//     let update = r#"di
+// django-completion
+// eprover"#;
+//     let outdated = vec![""];
+//
+//     struct Mock {};
+//     impl Terminal for Mock {
+//         fn width(&self) -> Result<usize, String> {
+//             Err("Can not get the terminal size.".to_owned())
+//         }
+//     }
+//     let terminal_info = Mock {};
+//     println!(
+//         "{}",
+//         build_updates_list(update.split('\n').collect(), &outdated, &terminal_info)
+//     );
+// }
 
 #[cfg(test)]
 mod tests {
