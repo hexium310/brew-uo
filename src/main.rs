@@ -1,27 +1,21 @@
-extern crate colored;
-extern crate itertools;
-extern crate prettytable;
-extern crate regex;
-extern crate term_size;
-extern crate version_compare;
-
 mod brew;
 mod terminal;
 
-use brew::*;
 use colored::{Color, Colorize};
+use crate::brew::*;
+use crate::terminal::*;
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
 use prettytable::{format, Table};
 use regex::Regex;
 use std::process::{exit, Command};
-use terminal::*;
 use version_compare::{CompOp, Version, VersionCompare};
 
 fn main() {
     let update_result = run_update();
     let outdated_result = run_outdated();
-    let brew = Brew::new(&update_result, &outdated_result);
+    let terminal = TerminalInfo {};
+    let brew = Brew::new(&update_result, &outdated_result, terminal);
     let update_output = BrewUpdate::parse(&brew).unwrap();
 
     println!("{}", update_output);
@@ -66,73 +60,6 @@ fn build_outdated_output(outdated_result: &str) -> String {
     tabulated_outdated_output.set_format(table_format);
 
     tabulated_outdated_output.to_string()
-}
-
-// fn build_updates_output(update_result: &str, outdated_result: &str) -> String {
-//     let message = extract_update_message(update_result);
-//     let outdated_list = outdated_result
-//         .lines()
-//         .map(|formula| formula.split_whitespace().next().unwrap())
-//         .collect::<Vec<_>>();
-//     let list = colorize_updates_list(update_result, &outdated_list);
-//
-//     format!("{}\n{}", message, list).trim_end_matches('\n').to_owned()
-// }
-
-fn build_updates_list<T: Terminal>(formulae: Vec<&str>, outdated_list: &[&str], terminal_info: &T) -> String {
-    if formulae == vec![""] {
-        return "".to_owned();
-    }
-
-    let gap_size = 2;
-    let gap_string = " ".repeat(gap_size);
-    let formulae_length = formulae.len();
-    let terminal_width = terminal_info.width().unwrap_or_else(|err| {
-        println!("Warning: {}", err);
-
-        0
-    });
-    let formula_name_lengths = formulae.iter().map(|formula| formula.len()).collect::<Vec<usize>>();
-    let column_number = (terminal_width + gap_size) / (formula_name_lengths.iter().max().unwrap_or(&0) + gap_size);
-
-    if column_number < 2 {
-        return formulae.join("\n");
-    }
-
-    let row_number = (formulae_length + column_number - 1) / column_number;
-    let column_width = (terminal_width + gap_size) / ((formulae_length + row_number - 1) / row_number) - gap_size;
-
-    (0..row_number)
-        .map(|nth_row| {
-            let row_item_indices = (nth_row..(formulae_length - 1)).step_by(row_number);
-
-            row_item_indices
-                .clone()
-                .enumerate()
-                .map(|(index, formula_index)| {
-                    let formula_default = formulae[formula_index];
-                    let padding = if index != row_item_indices.len() - 1 {
-                        " ".repeat(column_width - formula_name_lengths[formula_index])
-                    } else {
-                        "  ".to_owned()
-                    };
-
-                    let (formula, padding_with_checkmark) = if outdated_list.iter().any(|&v| v == formula_default) {
-                        (
-                            formula_default.bold().to_string(),
-                            padding.replacen("  ", &" ✔".green().to_string(), 1),
-                        )
-                    } else {
-                        (formula_default.to_owned(), padding)
-                    };
-
-                    format!("{}{}", formula, padding_with_checkmark)
-                })
-                .collect::<Vec<_>>()
-                .join(&gap_string)
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 fn build_version(version_parts: &[version_compare::VersionPart], delimiter: &[String]) -> String {
@@ -208,21 +135,6 @@ fn colorize_latest_version(current_versions: &[&str], latest_version_str: &str) 
         },
     )
 }
-
-fn colorize_updates_list(command_result: &str, outdated_list: &[&str]) -> String {
-    let terminal_info = TerminalInfo {};
-
-    Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?")
-        .unwrap()
-        .captures_iter(&command_result.replace("==>", "\n==>"))
-        .map(|captures| {
-            let list = build_updates_list((&captures[3]).split('\n').collect(), outdated_list, &terminal_info);
-            format!("{} {}\n{}", &(captures[1]).blue(), &(captures[2]).bold(), list)
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
 
 fn find_different_part_position(
     current_versions: &[&str],
