@@ -1,4 +1,5 @@
 mod brew;
+mod error;
 mod terminal;
 
 use colored::{Color, Colorize};

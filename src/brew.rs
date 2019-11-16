@@ -1,11 +1,12 @@
 use colored::Colorize;
-use regex::Regex;
+use crate::error::Error;
 use crate::terminal::*;
+use regex::Regex;
 
 pub trait BrewUpdate {
-    fn parse(&self) -> Result<String, String>;
-    fn update_message(&self) -> Result<String, String>;
-    fn colorize(&self) -> Result<String, String>;
+    fn parse(&self) -> Result<String, Error>;
+    fn update_message(&self) -> Result<String, Error>;
+    fn colorize(&self) -> Result<String, Error>;
     fn build_table(&self, formulae: Vec<&str>, outdated_list: &[&str]) -> String;
 }
 
@@ -31,17 +32,16 @@ impl<T: Terminal> Brew<T> {
 }
 
 impl<T: Terminal> BrewUpdate for Brew<T> {
-    fn parse(&self) -> Result<String, String> {
+    fn parse(&self) -> Result<String, Error> {
         let message = self.update_message()?;
         let list = self.colorize()?;
 
         Ok(format!("{}\n{}", message, list).trim_end_matches('\n').to_owned())
     }
 
-    fn update_message(&self) -> Result<String, String> {
+    fn update_message(&self) -> Result<String, Error> {
         Ok(
-            Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)")
-                .unwrap()
+            Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)")?
                 .captures_iter(&self.update_result_text)
                 .map(|captures| (&captures[0]).to_owned())
                 .collect::<Vec<_>>()
@@ -49,7 +49,7 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
         )
     }
 
-    fn colorize(&self) -> Result<String, String> {
+    fn colorize(&self) -> Result<String, Error> {
         let outdated_formulae = self
             .outdated_result_text
             .lines()
@@ -57,8 +57,7 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
             .collect::<Vec<_>>();
 
         Ok(
-            Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?")
-                .unwrap()
+            Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?")?
                 .captures_iter(&self.update_result_text.replace("==>", "\n==>"))
                 .map(|captures| {
                     let arrow = &captures[1];
@@ -81,11 +80,7 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
         let gap_size = 2;
         let gap_string = " ".repeat(gap_size);
         let formulae_length = formulae.len();
-        let terminal_width = self.terminal.width().unwrap_or_else(|err| {
-            println!("Warning: {}", err);
-
-            0
-        });
+        let terminal_width = self.terminal.width().unwrap_or(0);
         let formula_name_lengths = formulae.iter().map(|formula| formula.len()).collect::<Vec<usize>>();
         let column_number = (terminal_width + gap_size) / (formula_name_lengths.iter().max().unwrap_or(&0) + gap_size);
 
