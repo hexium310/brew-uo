@@ -1,16 +1,12 @@
 mod brew;
 mod error;
 mod terminal;
+mod version;
 
-use colored::{Color, Colorize};
 use crate::brew::*;
 use crate::terminal::*;
-use itertools::EitherOrBoth::{Both, Left};
-use itertools::Itertools;
-use prettytable::{format, Table};
-use regex::Regex;
+use colored::Colorize;
 use std::process::{exit, Command};
-use version_compare::{CompOp, Version, VersionCompare};
 
 fn main() {
     let update_result = run_update();
@@ -25,136 +21,10 @@ fn main() {
         exit(0);
     }
 
-    let outdated_output = build_outdated_output(&outdated_result);
+    let outdated_output = BrewOutdated::parse(&brew).unwrap();
 
     println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
     print!("{}", outdated_output);
-}
-
-fn build_outdated_csv(outdated_result: &str) -> String {
-    outdated_result
-        .lines()
-        .map(|formula| {
-            let captures = Regex::new(r"(.+)\s\((.+)\)\s<\s(.+)")
-                .unwrap()
-                .captures(formula)
-                .unwrap();
-            let name = &captures[1];
-            let current_versions = &captures[2].split(", ").collect::<Vec<_>>();
-            let colored_latest_version = colorize_latest_version(current_versions, &captures[3]);
-
-            format!(
-                "{},\"{}\",->,{}",
-                name,
-                current_versions.join(", "),
-                colored_latest_version
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-fn build_outdated_output(outdated_result: &str) -> String {
-    let outdated_result_csv = build_outdated_csv(outdated_result);
-    let mut tabulated_outdated_output = Table::from_csv_string(&outdated_result_csv).unwrap();
-    let table_format = format::FormatBuilder::new().padding(0, 4).build();
-    tabulated_outdated_output.set_format(table_format);
-
-    tabulated_outdated_output.to_string()
-}
-
-fn build_version(version_parts: &[version_compare::VersionPart], delimiter: &[String]) -> String {
-    let zipped = version_parts
-        .iter()
-        .map(|v| v.to_string())
-        .zip_longest(delimiter.iter().map(|v| v.to_owned()));
-
-    zipped
-        .clone()
-        .fold(
-            Vec::with_capacity(zipped.len() * 2) as Vec<String>,
-            |mut accumulator, tuple| match tuple {
-                Both(part, delimiter) => {
-                    accumulator.push(part);
-                    accumulator.push(delimiter);
-                    accumulator
-                },
-                Left(part) => {
-                    accumulator.push(part);
-                    accumulator
-                },
-                _ => accumulator,
-            },
-        )
-        .join("")
-}
-
-fn get_delimiters(version_str: &str) -> Vec<String> {
-    let delimiter_chars = ['.', '_'];
-
-    version_str
-        .matches(|version_char| {
-            delimiter_chars
-                .iter()
-                .any(|&delimiter_char| delimiter_char == version_char)
-        })
-        .map(|v| v.to_owned())
-        .collect::<Vec<_>>()
-}
-
-fn colorize_latest_version(current_versions: &[&str], latest_version_str: &str) -> String {
-    let delimiters = get_delimiters(latest_version_str);
-
-    Version::from(latest_version_str).map_or_else(
-        || latest_version_str.to_owned(),
-        |latest_version| {
-            let latest_version_parts = latest_version.parts();
-            let different_part_position = find_different_part_position(current_versions, latest_version_parts);
-
-            different_part_position.map_or_else(
-                || latest_version.to_string(),
-                |position| {
-                    let latest_version_parts_without_change =
-                        build_version(&latest_version_parts[..position], &delimiters[..position - 1]);
-                    let latest_version_parts_with_change =
-                        build_version(&latest_version_parts[position..], &delimiters[position..])
-                            .color(match position {
-                                0 => Color::Red,
-                                1 => Color::Blue,
-                                _ => Color::Green,
-                            })
-                            .to_string();
-
-                    format!(
-                        "{}{}{}",
-                        latest_version_parts_without_change,
-                        delimiters[position - 1],
-                        latest_version_parts_with_change,
-                    )
-                },
-            )
-        },
-    )
-}
-
-fn find_different_part_position(
-    current_versions: &[&str],
-    latest_version_parts: &[version_compare::VersionPart],
-) -> Option<usize> {
-    Version::from(current_versions.last().unwrap()).map_or_else(
-        || Some(1),
-        |newest_current_version| {
-            latest_version_parts
-                .iter()
-                .zip_longest(newest_current_version.parts().iter())
-                .position(|v| match v {
-                    Both(left, right) => {
-                        VersionCompare::compare_to(&left.to_string(), &right.to_string(), &CompOp::Ne).unwrap()
-                    },
-                    _ => true,
-                })
-        },
-    )
 }
 
 fn run_outdated() -> String {

@@ -1,6 +1,8 @@
-use colored::Colorize;
 use crate::error::Error;
 use crate::terminal::*;
+use crate::version::*;
+use colored::Colorize;
+use prettytable::{format, Table};
 use regex::Regex;
 
 pub trait BrewUpdate {
@@ -11,7 +13,8 @@ pub trait BrewUpdate {
 }
 
 pub trait BrewOutdated {
-    fn parse(&self) -> Result<String, String>;
+    fn parse(&self) -> Result<String, Error>;
+    fn outdated_result_csv(&self) -> String;
 }
 
 #[derive(Clone, Debug)]
@@ -45,7 +48,7 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
                 .captures_iter(&self.update_result_text)
                 .map(|captures| (&captures[0]).to_owned())
                 .collect::<Vec<_>>()
-                .join("\n")
+                .join("\n"),
         )
     }
 
@@ -68,7 +71,7 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
                     format!("{} {}\n{}", arrow.blue(), kind.bold(), table)
                 })
                 .collect::<Vec<_>>()
-                .join("\n")
+                .join("\n"),
         )
     }
 
@@ -106,14 +109,15 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
                             "  ".to_owned()
                         };
 
-                        let (formula, padding_with_checkmark) = if outdated_formulae.iter().any(|&v| v == formula_default) {
-                            (
-                                formula_default.bold().to_string(),
-                                padding.replacen("  ", &" ✔".green().to_string(), 1),
-                            )
-                        } else {
-                            (formula_default.to_owned(), padding)
-                        };
+                        let (formula, padding_with_checkmark) =
+                            if outdated_formulae.iter().any(|&v| v == formula_default) {
+                                (
+                                    formula_default.bold().to_string(),
+                                    padding.replacen("  ", &" ✔".green().to_string(), 1),
+                                )
+                            } else {
+                                (formula_default.to_owned(), padding)
+                            };
 
                         format!("{}{}", formula, padding_with_checkmark)
                     })
@@ -126,7 +130,35 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
 }
 
 impl<T: Terminal> BrewOutdated for Brew<T> {
-    fn parse(&self) -> Result<String, String> {
-        Ok("".to_owned())
+    fn parse(&self) -> Result<String, Error> {
+        let outdated_result_csv = self.outdated_result_csv();
+        let mut tabulated_outdated_output = Table::from_csv_string(&outdated_result_csv)?;
+        let table_format = format::FormatBuilder::new().padding(0, 4).build();
+        tabulated_outdated_output.set_format(table_format);
+
+        Ok(tabulated_outdated_output.to_string())
+    }
+
+    fn outdated_result_csv(&self) -> String {
+        self.outdated_result_text
+            .lines()
+            .map(|formula| {
+                let captures = Regex::new(r"(.+)\s\((.+)\)\s<\s(.+)")
+                    .unwrap()
+                    .captures(formula)
+                    .unwrap();
+                let name = &captures[1];
+                let current_versions = &captures[2].split(", ").collect::<Vec<_>>();
+                let version = Version::new(current_versions, &captures[3]);
+
+                format!(
+                    "{},\"{}\",->,{}",
+                    name,
+                    current_versions.join(", "),
+                    version.parse().unwrap()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }

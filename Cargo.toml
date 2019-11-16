@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 colored = "1.8"
+csv = "^1"
 regex = "1"
 version-compare = "0.0.10"
 itertools = "0.8"
