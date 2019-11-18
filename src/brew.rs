@@ -54,15 +54,12 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
 
     fn colorize(&self) -> Result<String, Error> {
         Ok(
-            Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?")?
+            Regex::new(r"(?P<arrow>==>) (?P<kind>(?:New|Updated|Renamed|Deleted) Formulae)\n(?P<formulae>(?:.+\n)+)\n?")?
                 .captures_iter(&self.update_result_text.replace("==>", "\n==>"))
                 .map(|captures| {
-                    let arrow = &captures[1];
-                    let kind = &captures[2];
-                    let formulae = &captures[3];
-                    let table = self.build_table(formulae.split('\n').collect());
+                    let table = self.build_table((&captures["formulae"]).split('\n').collect());
 
-                    format!("{} {}\n{}", arrow.blue(), kind.bold(), table)
+                    format!("{} {}\n{}", &captures["arrow"].blue(), &captures["kind"].bold(), table)
                 })
                 .collect::<Vec<_>>()
                 .join("\n"),
@@ -144,17 +141,16 @@ impl<T: Terminal> BrewOutdated for Brew<T> {
         self.outdated_result_text
             .lines()
             .map(|formula| {
-                let captures = Regex::new(r"(.+)\s\((.+)\)\s<\s(.+)")
+                let captures = Regex::new(r"(?P<name>.+)\s\((?P<current_versions>.+)\)\s<\s(?P<latest_version>.+)")
                     .unwrap()
                     .captures(formula)
                     .unwrap();
-                let name = &captures[1];
-                let current_versions = &captures[2].split(", ").collect::<Vec<_>>();
-                let version = Version::new(current_versions, &captures[3]);
+                let current_versions = &captures["current_versions"].split(", ").collect::<Vec<_>>();
+                let version = Version::new(current_versions, &captures["latest_version"]);
 
                 format!(
                     "{},\"{}\",->,{}",
-                    name,
+                    &captures["name"],
                     current_versions.join(", "),
                     version.parse().unwrap()
                 )
