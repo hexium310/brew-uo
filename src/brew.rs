@@ -9,7 +9,7 @@ pub trait BrewUpdate {
     fn parse(&self) -> Result<String, Error>;
     fn update_message(&self) -> Result<String, Error>;
     fn colorize(&self) -> Result<String, Error>;
-    fn build_table(&self, formulae: Vec<&str>, outdated_list: &[&str]) -> String;
+    fn build_table(&self, formulae: Vec<&str>) -> String;
 }
 
 pub trait BrewOutdated {
@@ -53,12 +53,6 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
     }
 
     fn colorize(&self) -> Result<String, Error> {
-        let outdated_formulae = self
-            .outdated_result_text
-            .lines()
-            .map(|formula| formula.split_whitespace().next().unwrap())
-            .collect::<Vec<_>>();
-
         Ok(
             Regex::new(r"(==>) ((?:New|Updated|Renamed|Deleted) Formulae)\n((?:.+\n)+)\n?")?
                 .captures_iter(&self.update_result_text.replace("==>", "\n==>"))
@@ -66,7 +60,7 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
                     let arrow = &captures[1];
                     let kind = &captures[2];
                     let formulae = &captures[3];
-                    let table = self.build_table(formulae.split('\n').collect(), &outdated_formulae);
+                    let table = self.build_table(formulae.split('\n').collect());
 
                     format!("{} {}\n{}", arrow.blue(), kind.bold(), table)
                 })
@@ -75,13 +69,20 @@ impl<T: Terminal> BrewUpdate for Brew<T> {
         )
     }
 
-    fn build_table(&self, formulae: Vec<&str>, outdated_formulae: &[&str]) -> String {
+    fn build_table(&self, formulae: Vec<&str>) -> String {
         if formulae == vec![""] {
             return "".to_owned();
         }
 
+        let outdated_formulae = self
+            .outdated_result_text
+            .lines()
+            .map(|formula| formula.split_whitespace().next().unwrap())
+            .collect::<Vec<_>>();
+
         let gap_size = 2;
         let gap_string = " ".repeat(gap_size);
+
         let formulae_length = formulae.len();
         let terminal_width = self.terminal.width().unwrap_or(0);
         let formula_name_lengths = formulae.iter().map(|formula| formula.len()).collect::<Vec<usize>>();

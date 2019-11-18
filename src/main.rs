@@ -11,8 +11,10 @@ use std::process::{exit, Command};
 fn main() {
     let update_result = run_update();
     let outdated_result = run_outdated();
+
     let terminal = TerminalInfo {};
     let brew = Brew::new(&update_result, &outdated_result, terminal);
+
     let update_output = BrewUpdate::parse(&brew).unwrap();
 
     println!("{}", update_output);
