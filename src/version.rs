@@ -53,8 +53,15 @@ impl VersionTrait for Version {
                 Ok(different_part_position.map_or_else(
                     || latest_version.to_string(),
                     |position| {
-                        let latest_version_parts_without_change =
-                            self.build_version(&latest_version_parts[..position], &self.delimiters[..position - 1]);
+                        let (latest_version_parts_without_change, between_delimiter) =
+                            if let Some(p) = position.checked_sub(1) {
+                                (
+                                    self.build_version(&latest_version_parts[..position], &self.delimiters[..p]),
+                                    self.delimiters[p].to_owned(),
+                                )
+                            } else {
+                                ("".to_owned(), "".to_owned())
+                            };
                         let latest_version_parts_with_change = self
                             .build_version(&latest_version_parts[position..], &self.delimiters[position..])
                             .color(match position {
@@ -66,9 +73,7 @@ impl VersionTrait for Version {
 
                         format!(
                             "{}{}{}",
-                            latest_version_parts_without_change,
-                            self.delimiters[position - 1],
-                            latest_version_parts_with_change,
+                            latest_version_parts_without_change, between_delimiter, latest_version_parts_with_change,
                         )
                     },
                 ))
