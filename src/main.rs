@@ -11,22 +11,22 @@ use std::process::{exit, Command};
 fn main() {
     let update_result = run_update();
     let outdated_result = run_outdated();
-
-    let terminal = TerminalInfo {};
-    let brew = Brew::new(&update_result, &outdated_result, terminal);
-
-    let update_output = BrewUpdate::parse(&brew).unwrap();
-
-    println!("{}", update_output);
-
-    if outdated_result.is_empty() {
-        exit(0);
-    }
-
-    let outdated_output = BrewOutdated::parse(&brew).unwrap();
-
-    println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
-    print!("{}", outdated_output);
+    //
+    // let terminal = TerminalInfo {};
+    // let brew = BrewData::new(&update_result, &outdated_result, terminal);
+    //
+    // let update_output = BrewUpdate::output(&brew).unwrap();
+    //
+    // println!("{}", update_output);
+    //
+    // if outdated_result.is_empty() {
+    //     exit(0);
+    // }
+    //
+    // let outdated_output = BrewOutdated::parse(&brew).unwrap();
+    //
+    // println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
+    // print!("{}", outdated_output);
 }
 
 fn run_outdated() -> String {
