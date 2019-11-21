@@ -1,6 +1,6 @@
 use crate::error::Error;
 use colored::{Color, Colorize};
-use itertools::EitherOrBoth::{Both, Left};
+use itertools::EitherOrBoth::Both;
 use itertools::Itertools;
 use version_compare::{CompOp, VersionCompare, VersionPart};
 
@@ -99,28 +99,10 @@ impl VersionTrait for Version {
     }
 
     fn build_version(&self, version_parts: &[VersionPart], delimiters: &[String]) -> String {
-        let zipped = version_parts
+        version_parts
             .iter()
             .map(|v| v.to_string())
-            .zip_longest(delimiters.iter().map(|v| v.to_owned()));
-
-        zipped
-            .clone()
-            .fold(
-                Vec::with_capacity(zipped.len() * 2) as Vec<String>,
-                |mut accumulator, tuple| match tuple {
-                    Both(part, delimiter) => {
-                        accumulator.push(part);
-                        accumulator.push(delimiter);
-                        accumulator
-                    },
-                    Left(part) => {
-                        accumulator.push(part);
-                        accumulator
-                    },
-                    _ => accumulator,
-                },
-            )
+            .interleave(delimiters.iter().map(|v| v.to_owned()))
             .join("")
     }
 }
