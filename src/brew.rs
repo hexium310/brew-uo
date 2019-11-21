@@ -173,7 +173,7 @@ i2p"#;
         .into_iter()
         .map(|(k, v)| (k, v.collect::<Vec<_>>()))
         .enumerate()
-        .filter(|(key, (bool, _))| (*key == 0 && !bool) || *key != 0)
+        .filter(|(key, (partial_eq, _))| (*key == 0 && !partial_eq) || *key != 0)
         .map(|(_, v)| v)
         .collect::<Vec<_>>();
     println!("{}\n", update);
