@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use crate::error::Error;
 use crate::terminal::*;
 use crate::version::*;
@@ -5,9 +6,17 @@ use colored::Colorize;
 use itertools::Itertools;
 use prettytable::{format, Table};
 use regex::Regex;
+use std::{
+    iter::Zip,
+    vec::IntoIter,
+};
 
-pub trait BrewUpdate {
+pub trait BrewUpdate<'a> {
+    type Information;
+
     fn messages(update_result_text: &str) -> Result<Vec<String>, Error>;
+    fn information(update_result_text: &'a str) -> Self::Information;
+
     // fn colorize(&self) -> Result<String, Error>;
     // fn build_table(&self, formulae: Vec<&str>) -> String;
 }
@@ -18,21 +27,26 @@ pub trait BrewOutdated {
 }
 
 #[derive(Clone, Debug)]
-pub struct BrewData {
+pub struct BrewData<'a> {
     messages: Vec<String>,
+    information: <BrewData<'a> as BrewUpdate<'a>>::Information,
 }
 
-impl BrewData {
-    pub fn parse(update_result_text: &str, outdated_result_text: &str) -> BrewData {
+impl<'a> BrewData<'a> {
+    pub fn _parse(update_result_text: &'a str, _outdated_result_text: &str) -> BrewData<'a> {
         let messages = BrewData::messages(update_result_text).unwrap();
+        let information = BrewData::information(update_result_text);
 
         BrewData {
             messages,
+            information,
         }
     }
 }
 
-impl BrewUpdate for BrewData {
+impl<'a> BrewUpdate<'a> for BrewData<'a> {
+    type Information = Zip<IntoIter<Vec<&'a str>>, IntoIter<Vec<&'a str>>>;
+
     fn messages(update_result_text: &str) -> Result<Vec<String>, Error> {
         Ok(
             Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)")?
@@ -40,6 +54,23 @@ impl BrewUpdate for BrewData {
                 .map(|captures| (&captures[0]).to_owned())
                 .collect::<Vec<_>>()
         )
+    }
+
+    fn information(update_result_text: &'a str) -> Self::Information {
+        let grouped = update_result_text
+            .lines()
+            .group_by(|v| v.find("==>").is_none())
+            .into_iter()
+            .map(|(k, v)| (k, v.collect::<Vec<_>>()))
+            .enumerate()
+            .filter(|&(k, (eq, _))| !(k == 0 && eq))
+            .map(|(_, v)| v)
+            .collect::<Vec<_>>();
+
+        let kinds = grouped.clone().into_iter().filter(|&(k, _)| !k).map(|(_, v)| v).collect::<Vec<_>>();
+        let formulae = grouped.into_iter().filter(|&(k, _)| k).map(|(_, v)| v).collect::<Vec<_>>();
+
+        kinds.into_iter().zip(formulae.into_iter())
     }
 
     // fn colorize(&self) -> Result<String, Error> {
@@ -165,17 +196,7 @@ hypre
 gmic
 hypre
 i2p"#;
-    let vec = update.lines().collect::<Vec<_>>();
 
-    let a = vec
-        .iter()
-        .group_by(|v| v.find("==>").is_none())
-        .into_iter()
-        .map(|(k, v)| (k, v.collect::<Vec<_>>()))
-        .enumerate()
-        .filter(|(key, (partial_eq, _))| (*key == 0 && !partial_eq) || *key != 0)
-        .map(|(_, v)| v)
-        .collect::<Vec<_>>();
-    println!("{}\n", update);
+    let a = BrewData::information(update);
     println!("{:?}", a);
 }
