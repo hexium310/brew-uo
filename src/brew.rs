@@ -3,6 +3,7 @@ use crate::error::Error;
 use crate::terminal::*;
 use crate::version::*;
 use colored::Colorize;
+use indoc::indoc;
 use itertools::Itertools;
 use prettytable::{format, Table};
 use regex::Regex;
@@ -181,22 +182,52 @@ impl<'a> BrewUpdate<'a> for BrewData<'a> {
 //     }
 // }
 
-#[test]
-fn test() {
-    let update = r#"Updated 1 tap (homebrew/core).
-==> Updated Formulae
-di
-django-completion
-eprover
-fluid-synth
-gdcm
-gmic
-hypre
-==> Deleted Formulae
-gmic
-hypre
-i2p"#;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let a = BrewData::information(update);
-    println!("{:?}", a);
+    // const UPDATE_RESUT_TEXT: &str = indoc!(
+    //     r#"
+    //         Updated 1 tap (homebrew/core).
+    //         ==> Updated Formulae
+    //         cargo-completion
+    //         di
+    //         django-completion
+    //         eprover
+    //         fluid-synth
+    //         gdcm
+    //         gmic
+    //         hypre
+    //         zsh
+    //         ==> Deleted Formulae
+    //         libpagemaker
+    //         mypy
+    //         oauth2l
+    //     "#
+    // );
+
+    #[test]
+    fn messages() {
+        let text = indoc!(
+            r#"
+                Updated 1 tap (homebrew/core).
+                Already up-to-date.
+                No changes to formulae.
+                ==> Updated Formulae
+                typescript
+                php
+            "#
+        );
+        let messages = BrewData::messages(text);
+
+        assert_eq!(
+            messages.ok(),
+            Some(vec![
+                "Updated 1 tap (homebrew/core).".to_owned(),
+                "Already up-to-date.".to_owned(),
+                "No changes to formulae.".to_owned(),
+            ])
+        );
+        assert_eq!(BrewData::messages("").ok(), Some(vec![]));
+    }
 }
