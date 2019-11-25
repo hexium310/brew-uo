@@ -20,12 +20,11 @@ pub trait BrewUpdate<'a> {
     fn information(update_result_text: &'a str) -> Self::Information;
 }
 
-pub trait BrewOutdated {
-    // type Information;
+pub trait BrewOutdated<'a> {
+    type Information;
 
-    // fn information(outdated_result_text: &'a str) -> Self::Information;
-    fn information(outdated_result_text: &str) -> BrewOutdatedInfo<()>;
-    fn a(formula: &str) -> Option<BrewOutdatedItem>;
+    fn information(outdated_result_text: &'a str) -> Self::Information;
+    fn a(formula: &str) -> Option<BrewOutdatedInfo>;
 }
 
 #[derive(Clone, Debug)]
@@ -83,33 +82,21 @@ impl<'a> BrewUpdate<'a> for BrewUpdateData<'a> {
 }
 
 #[derive(Clone, Debug)]
-pub struct BrewOutdatedData {
-    information: BrewOutdatedInfo<()>,
-}
+pub struct BrewOutdatedData {}
 
-impl BrewOutdatedData {
-    pub fn _new(outdated_result_text: &str) -> Self {
-        let information = Self::information(outdated_result_text);
+impl<'a> BrewOutdated<'a> for BrewOutdatedData {
+    type Information = std::iter::FilterMap<Lines<'a>, fn(&'a str) -> Option<BrewOutdatedInfo>>;
 
-        BrewOutdatedData {
-            information,
-        }
-    }
-}
-
-impl BrewOutdated for BrewOutdatedData {
-    // type Information = std::iter::FilterMap<Lines<'a>, fn(&str) -> Option<BrewOutdatedInfo>>;
-
-    fn information(outdated_result_text: &str) -> BrewOutdatedInfo<()> {
-        BrewOutdatedInfo::_new(outdated_result_text.lines().filter_map(Self::a))
+    fn information(outdated_result_text: &'a str) -> Self::Information {
+        outdated_result_text.lines().filter_map(Self::a)
     }
 
-    fn a(formula: &str) -> Option<BrewOutdatedItem> {
+    fn a(formula: &str) -> Option<BrewOutdatedInfo> {
         match Regex::new(r"(?P<name>.+)\s\((?P<current_versions>.+)\)\s<\s(?P<latest_version>.+)")
             .unwrap()
             .captures(formula)
         {
-            Some(captures) => Some(BrewOutdatedItem::new(
+            Some(captures) => Some(BrewOutdatedInfo::new(
                 &captures["name"],
                 &captures["current_versions"].split(", ").collect::<Vec<_>>(),
                 &captures["latest_version"],
@@ -119,32 +106,20 @@ impl BrewOutdated for BrewOutdatedData {
     }
 }
 
-
 #[derive(Clone, Debug)]
-pub struct BrewOutdatedItem {
+pub struct BrewOutdatedInfo {
     name: String,
     current_versions: Vec<String>,
     latest_version: String,
 }
 
-impl BrewOutdatedItem {
+impl BrewOutdatedInfo {
     pub fn new(name: &str, current_versions: &[&str], latest_version: &str) -> Self {
-        BrewOutdatedItem {
+        BrewOutdatedInfo {
             name: name.to_owned(),
             current_versions: current_versions.iter().map(|&v| v.to_string()).collect::<Vec<_>>(),
             latest_version: latest_version.to_owned(),
         }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct BrewOutdatedInfo<I> {
-    _m: std::marker::PhantomData<fn () -> I>,
-}
-
-impl<I> BrewOutdatedInfo<I> where I: Iterator {
-    pub fn _new(iter: I) -> I {
-        iter
     }
 }
 
@@ -299,6 +274,6 @@ mod tests {
                 "No changes to formulae.".to_owned(),
             ])
         );
-        assert_eq!(BrewUpdateData::messages("a\nb").ok(), Some(vec![]));
+        assert_eq!(BrewUpdateData::messages("").ok(), Some(vec![]));
     }
 }
