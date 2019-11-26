@@ -8,7 +8,7 @@ use itertools::Itertools;
 use prettytable::{format, Table};
 use regex::Regex;
 use std::{
-    iter::{Map, Zip},
+    iter::{FilterMap, Zip},
     str::Lines,
     vec::IntoIter,
 };
@@ -24,26 +24,28 @@ pub trait BrewOutdated<'a> {
     type Information;
 
     fn information(outdated_result_text: &'a str) -> Self::Information;
-    fn a(formula: &str) -> Option<BrewOutdatedInfo>;
+    fn detail(formula: &str) -> Option<BrewOutdatedDetail>;
 }
 
 #[derive(Clone, Debug)]
 pub struct BrewUpdateData<'a> {
     messages: Vec<String>,
-    information: <BrewUpdateData<'a> as BrewUpdate<'a>>::Information,
+    // information: <BrewUpdateData<'a> as BrewUpdate<'a>>::Information,
+    _m: std::marker::PhantomData<&'a ()>
 }
 
 impl<'a> BrewUpdateData<'a> {
-    pub fn _new(update_result_text: &'a str, _outdated_result_text: &str) -> BrewUpdateData<'a> {
+    pub fn _new(update_result_text: &'a str) -> BrewUpdateData<'a> {
         let messages = BrewUpdateData::messages(update_result_text).unwrap();
-        let information = BrewUpdateData::information(update_result_text);
+        // let information = BrewUpdateData::information(update_result_text);
 
-        BrewUpdateData { messages, information }
+        // BrewUpdateData { messages, information }
+        BrewUpdateData { messages, _m: std::marker::PhantomData }
     }
 }
 
 impl<'a> BrewUpdate<'a> for BrewUpdateData<'a> {
-    type Information = Zip<IntoIter<Vec<&'a str>>, IntoIter<Vec<&'a str>>>;
+    type Information = Box<dyn Iterator<Item = (Vec<&'a str>, Vec<&'a str>)> + 'a>;
 
     fn messages(update_result_text: &str) -> Result<Vec<String>, Error> {
         Ok(
@@ -55,29 +57,27 @@ impl<'a> BrewUpdate<'a> for BrewUpdateData<'a> {
     }
 
     fn information(update_result_text: &'a str) -> Self::Information {
-        let grouped = update_result_text
-            .lines()
-            .group_by(|v| v.find("==>").is_none())
-            .into_iter()
-            .map(|(k, v)| (k, v.collect::<Vec<_>>()))
-            .enumerate()
-            .filter(|&(k, (eq, _))| !(k == 0 && eq))
-            .map(|(_, v)| v)
-            .collect::<Vec<_>>();
-
-        let kinds = grouped
-            .clone()
-            .into_iter()
-            .filter(|&(k, _)| !k)
-            .map(|(_, v)| v)
-            .collect::<Vec<_>>();
-        let formulae = grouped
-            .into_iter()
-            .filter(|&(k, _)| k)
-            .map(|(_, v)| v)
-            .collect::<Vec<_>>();
-
-        kinds.into_iter().zip(formulae.into_iter())
+        Box::new(
+            update_result_text
+                .lines()
+                .group_by(|v| v.find("==>").is_none())
+                .into_iter()
+                .map(|(k, v)| (k, v.collect::<Vec<_>>()))
+                .enumerate()
+                .filter(|&(k, (eq, _))| !(k == 0 && eq))
+                .map(|(_, v)| v)
+                .batching(|it| {
+                    match it.next() {
+                        Some((kind_bool, kind_value)) if kind_bool => match it.next() {
+                            None => None,
+                            Some(formulae) => Some((kind_value, formulae.1)),
+                        },
+                        _ => None,
+                    }
+                })
+                // .collect::<Vec<_>>()
+                // .into_iter()
+        )
     }
 }
 
@@ -85,18 +85,19 @@ impl<'a> BrewUpdate<'a> for BrewUpdateData<'a> {
 pub struct BrewOutdatedData {}
 
 impl<'a> BrewOutdated<'a> for BrewOutdatedData {
-    type Information = std::iter::FilterMap<Lines<'a>, fn(&'a str) -> Option<BrewOutdatedInfo>>;
+    // type Information = FilterMap<Lines<'a>, fn(&'a str) -> Option<BrewOutdatedDetail>>;
+    type Information = Box<dyn Iterator<Item = BrewOutdatedDetail> + 'a>;
 
     fn information(outdated_result_text: &'a str) -> Self::Information {
-        outdated_result_text.lines().filter_map(Self::a)
+        Box::new(outdated_result_text.lines().filter_map(Self::detail))
     }
 
-    fn a(formula: &str) -> Option<BrewOutdatedInfo> {
+    fn detail(formula: &str) -> Option<BrewOutdatedDetail> {
         match Regex::new(r"(?P<name>.+)\s\((?P<current_versions>.+)\)\s<\s(?P<latest_version>.+)")
             .unwrap()
             .captures(formula)
         {
-            Some(captures) => Some(BrewOutdatedInfo::new(
+            Some(captures) => Some(BrewOutdatedDetail::new(
                 &captures["name"],
                 &captures["current_versions"].split(", ").collect::<Vec<_>>(),
                 &captures["latest_version"],
@@ -107,15 +108,15 @@ impl<'a> BrewOutdated<'a> for BrewOutdatedData {
 }
 
 #[derive(Clone, Debug)]
-pub struct BrewOutdatedInfo {
+pub struct BrewOutdatedDetail {
     name: String,
     current_versions: Vec<String>,
     latest_version: String,
 }
 
-impl BrewOutdatedInfo {
+impl BrewOutdatedDetail {
     pub fn new(name: &str, current_versions: &[&str], latest_version: &str) -> Self {
-        BrewOutdatedInfo {
+        BrewOutdatedDetail {
             name: name.to_owned(),
             current_versions: current_versions.iter().map(|&v| v.to_string()).collect::<Vec<_>>(),
             latest_version: latest_version.to_owned(),
