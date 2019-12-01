@@ -10,7 +10,10 @@ mod error;
 mod terminal;
 mod version;
 
-use crate::brew::{brew_outdated::BrewOutdatedData, brew_update::BrewUpdateData};
+use crate::brew::parser::{
+    BrewOutdatedData,
+    BrewUpdateData,
+};
 use crate::terminal::*;
 use colored::Colorize;
 use std::process::{exit, Command};
@@ -18,6 +21,8 @@ use std::process::{exit, Command};
 fn main() {
     let update_result = run_update();
     let outdated_result = run_outdated();
+    BrewUpdateData::new("");
+    BrewOutdatedData::new("");
 
     //
     // let terminal = TerminalInfo {};
