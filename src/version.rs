@@ -5,7 +5,7 @@ use itertools::Itertools;
 use version_compare::{CompOp, VersionCompare, VersionPart};
 
 pub trait VersionTrait {
-    fn parse(&self) -> Result<String, Error>;
+    fn colorize(&self) -> Result<String, Error>;
     fn find_different_part_position(&self, latest_version_parts: &[VersionPart]) -> Option<usize>;
     fn build_version(&self, version_parts: &[VersionPart], delimiters: &[String]) -> String;
 }
@@ -18,11 +18,15 @@ pub struct Version {
 }
 
 impl Version {
-    pub fn new(current_versions: &[&str], latest_version: &str) -> Version {
+    pub fn new<I, T>(current_versions: I, latest_version: &str) -> Version
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<String>,
+    {
         let delimiters = Version::delimiters(latest_version);
 
         Version {
-            current_versions: current_versions.iter().map(|&v| v.to_owned()).collect::<Vec<_>>(),
+            current_versions: current_versions.into_iter().map(Into::into).collect(),
             latest_version: latest_version.to_owned(),
             delimiters,
         }
@@ -43,7 +47,7 @@ impl Version {
 }
 
 impl VersionTrait for Version {
-    fn parse(&self) -> Result<String, Error> {
+    fn colorize(&self) -> Result<String, Error> {
         version_compare::Version::from(&self.latest_version).map_or_else(
             || Ok(self.latest_version.clone()),
             |latest_version| {

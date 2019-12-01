@@ -1,3 +1,4 @@
+use crate::version::*;
 use regex::Regex;
 
 trait BrewOutdatedParser {
@@ -7,7 +8,7 @@ trait BrewOutdatedParser {
 
 #[derive(Clone, Debug)]
 pub struct BrewOutdatedData {
-    information: Vec<BrewOutdatedDetail>,
+    pub information: Vec<BrewOutdatedDetail>,
 }
 
 impl BrewOutdatedData {
@@ -43,9 +44,9 @@ impl BrewOutdatedParser for BrewOutdatedData {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BrewOutdatedDetail {
-    name: String,
-    current_versions: Vec<String>,
-    latest_version: String,
+    pub name: String,
+    pub current_versions: Vec<String>,
+    pub latest_version: String,
 }
 
 impl BrewOutdatedDetail {
@@ -54,6 +55,16 @@ impl BrewOutdatedDetail {
             name: name.to_owned(),
             current_versions: current_versions.iter().map(|&v| v.to_string()).collect::<Vec<_>>(),
             latest_version: latest_version.to_owned(),
+        }
+    }
+
+    pub fn colorize(&self) -> Self {
+        let latest_version = Version::new(&self.current_versions, &self.latest_version).colorize().unwrap();
+
+        BrewOutdatedDetail {
+            name: self.name.clone(),
+            current_versions: self.current_versions.clone(),
+            latest_version,
         }
     }
 }
