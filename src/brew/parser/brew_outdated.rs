@@ -1,9 +1,10 @@
 use crate::version::*;
 use regex::Regex;
 
-trait BrewOutdatedParser {
-    fn information(outdated_result_text: &str) -> Vec<BrewOutdatedDetail>;
+pub trait BrewOutdatedParser {
+    fn information(text: &str) -> Vec<BrewOutdatedDetail>;
     fn detail(formula: &str) -> Option<BrewOutdatedDetail>;
+    fn names(&self) -> Vec<String>;
 }
 
 #[derive(Clone, Debug)]
@@ -12,8 +13,8 @@ pub struct BrewOutdatedData {
 }
 
 impl BrewOutdatedData {
-    pub fn new(outdated_result_text: &str) -> Self {
-        let information = Self::information(outdated_result_text);
+    pub fn new(text: &str) -> Self {
+        let information = Self::information(text);
 
         BrewOutdatedData { information }
     }
@@ -34,11 +35,12 @@ impl BrewOutdatedParser for BrewOutdatedData {
         }
     }
 
-    fn information(outdated_result_text: &str) -> Vec<BrewOutdatedDetail> {
-        outdated_result_text
-            .lines()
-            .filter_map(Self::detail)
-            .collect::<Vec<_>>()
+    fn information(text: &str) -> Vec<BrewOutdatedDetail> {
+        text.lines().filter_map(Self::detail).collect::<Vec<_>>()
+    }
+
+    fn names(&self) -> Vec<String> {
+        self.information.iter().map(|v| v.name.clone()).collect()
     }
 }
 
@@ -59,7 +61,9 @@ impl BrewOutdatedDetail {
     }
 
     pub fn colorize(&self) -> Self {
-        let latest_version = Version::new(&self.current_versions, &self.latest_version).colorize().unwrap();
+        let latest_version = Version::new(&self.current_versions, &self.latest_version)
+            .colorize()
+            .unwrap();
 
         BrewOutdatedDetail {
             name: self.name.clone(),

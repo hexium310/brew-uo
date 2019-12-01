@@ -3,37 +3,37 @@ use itertools::Itertools;
 use regex::Regex;
 
 trait BrewUpdateParser {
-    fn messages(update_result_text: &str) -> Result<Vec<String>, Error>;
-    fn information(update_result_text: &str) -> Vec<(Vec<&str>, Vec<&str>)>;
+    fn messages(text: &str) -> Result<Vec<String>, Error>;
+    fn information(text: &str) -> Vec<(Vec<&str>, Vec<&str>)>;
 }
 
 #[derive(Clone, Debug)]
 pub struct BrewUpdateData<'a> {
-    messages: Vec<String>,
-    information: Vec<(Vec<&'a str>, Vec<&'a str>)>,
+    pub messages: Vec<String>,
+    pub information: Vec<(Vec<&'a str>, Vec<&'a str>)>,
 }
 
 impl<'a> BrewUpdateData<'a> {
-    pub fn new(update_result_text: &str) -> BrewUpdateData {
-        let messages = BrewUpdateData::messages(update_result_text).unwrap();
-        let information = BrewUpdateData::information(update_result_text);
+    pub fn new(text: &str) -> BrewUpdateData {
+        let messages = BrewUpdateData::messages(text).unwrap();
+        let information = BrewUpdateData::information(text);
 
         BrewUpdateData { messages, information }
     }
 }
 
 impl<'a> BrewUpdateParser for BrewUpdateData<'a> {
-    fn messages(update_result_text: &str) -> Result<Vec<String>, Error> {
+    fn messages(text: &str) -> Result<Vec<String>, Error> {
         Ok(
             Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)")?
-                .captures_iter(update_result_text)
+                .captures_iter(text)
                 .map(|captures| (&captures[0]).to_owned())
                 .collect::<Vec<_>>(),
         )
     }
 
-    fn information(update_result_text: &str) -> Vec<(Vec<&str>, Vec<&str>)> {
-        update_result_text
+    fn information(text: &str) -> Vec<(Vec<&str>, Vec<&str>)> {
+        text
             .lines()
             // When the line starts with "==>", returns (true, value).
             .group_by(|v| v.find("==>").is_some())
@@ -120,5 +120,10 @@ mod tests {
         );
         assert_eq!(iter.next(), Some(&(vec!["==> TEST"], vec!["test1", "test2"])));
         assert_eq!(iter.next(), None);
+
+        let empty = BrewUpdateData::information("");
+        let mut empty_iter = empty.iter();
+
+        assert_eq!(empty_iter.next(), None);
     }
 }

@@ -1,6 +1,3 @@
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-
 #[cfg(test)]
 #[macro_use(indoc)]
 extern crate indoc;
@@ -10,10 +7,7 @@ mod error;
 mod terminal;
 mod version;
 
-use crate::brew::parser::{
-    BrewOutdatedData,
-    BrewUpdateData,
-};
+use crate::brew::{formatter::*, parser::*};
 use crate::terminal::*;
 use colored::Colorize;
 use std::process::{exit, Command};
@@ -21,25 +15,34 @@ use std::process::{exit, Command};
 fn main() {
     let update_result = run_update();
     let outdated_result = run_outdated();
-    BrewUpdateData::new("");
-    BrewOutdatedData::new("");
 
-    //
-    // let terminal = TerminalInfo {};
-    // let brew = BrewData::new(&update_result, &outdated_result, terminal);
-    //
-    // let update_output = BrewUpdate::output(&brew).unwrap();
-    //
-    // println!("{}", update_output);
-    //
-    // if outdated_result.is_empty() {
-    //     exit(0);
-    // }
-    //
-    // let outdated_output = BrewOutdated::parse(&brew).unwrap();
-    //
-    // println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
-    // print!("{}", outdated_output);
+    let update_data = BrewUpdateData::new(&update_result);
+    let outdated_data = BrewOutdatedData::new(&outdated_result);
+
+    let terminal = TerminalInfo {};
+    match BrewUpdate::new(&update_data, &outdated_data, terminal).format() {
+        Ok(output) if output != "" => {
+            println!("{}", output);
+        },
+        Ok(_) => (),
+        Err(err) => {
+            println!("update error: {:?}", err);
+        },
+    };
+
+    if outdated_result.is_empty() {
+        exit(0);
+    }
+
+    match BrewOutdated::new(&outdated_data).format() {
+        Ok(output) => {
+            println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
+            print!("{}", output);
+        },
+        Err(err) => {
+            println!("outdated error: {:?}", err);
+        },
+    }
 }
 
 fn run_outdated() -> String {
