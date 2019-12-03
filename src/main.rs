@@ -18,8 +18,8 @@ fn main() {
 
     let update_data = BrewUpdateData::new(&update_result);
     let outdated_data = BrewOutdatedData::new(&outdated_result);
-
     let terminal = TerminalInfo {};
+
     match BrewUpdate::new(&update_data, &outdated_data, terminal).format() {
         Ok(output) if output != "" => {
             println!("{}", output);
