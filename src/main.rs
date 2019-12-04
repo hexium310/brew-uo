@@ -1,3 +1,4 @@
+#![feature(type_alias_impl_trait)]
 #[cfg(test)]
 #[macro_use(indoc)]
 extern crate indoc;
@@ -7,7 +8,7 @@ mod error;
 mod terminal;
 mod version;
 
-use crate::brew::{formatter::*, parser::*};
+use crate::brew::Brew;
 use crate::terminal::*;
 use colored::Colorize;
 use std::process::{exit, Command};
@@ -16,11 +17,11 @@ fn main() {
     let update_result = run_update();
     let outdated_result = run_outdated();
 
-    let update_data = BrewUpdateData::new(&update_result);
-    let outdated_data = BrewOutdatedData::new(&outdated_result);
     let terminal = TerminalInfo {};
 
-    match BrewUpdate::new(&update_data, &outdated_data, terminal).format() {
+    let brew = Brew::new(&update_result, &outdated_result, terminal);
+
+    match brew.update.format() {
         Ok(output) if output != "" => {
             println!("{}", output);
         },
@@ -34,7 +35,7 @@ fn main() {
         exit(0);
     }
 
-    match BrewOutdated::new(&outdated_data).format() {
+    match brew.outdated.format() {
         Ok(output) => {
             println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
             print!("{}", output);

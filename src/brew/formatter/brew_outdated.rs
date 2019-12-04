@@ -3,11 +3,6 @@ use crate::error::Error;
 use itertools::Itertools;
 use prettytable::{format, Table};
 
-pub trait BrewOutdatedFormatter {
-    fn format(&self) -> Result<String, Error>;
-    fn csv(&self) -> String;
-}
-
 #[derive(Clone, Debug)]
 pub struct BrewOutdated {
     data: BrewOutdatedData,
@@ -19,10 +14,10 @@ impl BrewOutdated {
     }
 }
 
-impl BrewOutdatedFormatter for BrewOutdated {
+impl BrewOutdated {
     fn csv(&self) -> String {
         self.data
-            .information
+            .information()
             .iter()
             .map(|formula| {
                 let colored = formula.colorize();
@@ -37,7 +32,7 @@ impl BrewOutdatedFormatter for BrewOutdated {
             .join("\n")
     }
 
-    fn format(&self) -> Result<String, Error> {
+    pub fn format(&self) -> Result<String, Error> {
         let mut table = Table::from_csv_string(&self.csv())?;
         let table_format = format::FormatBuilder::new().padding(0, 4).build();
         table.set_format(table_format);
