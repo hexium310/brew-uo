@@ -1,12 +1,14 @@
 use crate::version::*;
 use regex::Regex;
 
-// pub trait BrewOutdatedParser {
-//     fn information(text: &str) -> Vec<BrewOutdatedDetail>;
-//     fn detail(formula: &str) -> Option<BrewOutdatedDetail>;
-//     fn names(&self) -> Vec<String>;
-// }
-//
+pub(crate) trait BrewOutdatedParser {
+    type Items: Iterator<Item = BrewOutdatedDetail>;
+
+    fn items(&self) -> Self::Items;
+    fn detail(formula: &str) -> Option<BrewOutdatedDetail>;
+    fn names(&self) -> Vec<String>;
+}
+
 #[derive(Clone, Debug)]
 pub struct BrewOutdatedData {
     text: String,
@@ -18,7 +20,9 @@ impl BrewOutdatedData {
     }
 }
 
-impl BrewOutdatedData {
+impl BrewOutdatedParser for BrewOutdatedData {
+    type Items = impl Iterator<Item = BrewOutdatedDetail>;
+
     fn detail(formula: &str) -> Option<BrewOutdatedDetail> {
         match Regex::new(r"(?P<name>.+)\s\((?P<current_versions>.+)\)\s<\s(?P<latest_version>.+)")
             .unwrap()
@@ -33,12 +37,16 @@ impl BrewOutdatedData {
         }
     }
 
-    pub(crate) fn information(&self) -> Vec<BrewOutdatedDetail> {
-        self.text.lines().filter_map(Self::detail).collect::<Vec<_>>()
+    fn items(&self) -> Self::Items {
+        self.text
+            .lines()
+            .filter_map(Self::detail)
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 
-    pub(crate) fn names(&self) -> Vec<String> {
-        self.information().iter().map(|v| v.name.clone()).collect()
+    fn names(&self) -> Vec<String> {
+        self.items().map(|v| v.name).collect()
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::brew::parser::BrewOutdatedData;
+use crate::brew::parser::*;
 use crate::error::Error;
 use itertools::Itertools;
 use prettytable::{format, Table};
@@ -17,8 +17,7 @@ impl BrewOutdated {
 impl BrewOutdated {
     fn csv(&self) -> String {
         self.data
-            .information()
-            .iter()
+            .items()
             .map(|formula| {
                 let colored = formula.colorize();
 

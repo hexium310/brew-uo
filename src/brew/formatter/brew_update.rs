@@ -35,7 +35,7 @@ where
     pub fn format(&self) -> Result<String, Error> {
         Ok(self
             .update_data
-            .information()
+            .items()
             .map(|(kinds, formulae)| {
                 let table = self.tabulate(&formulae);
                 let kind = kinds

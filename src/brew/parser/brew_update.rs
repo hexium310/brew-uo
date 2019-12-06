@@ -3,10 +3,10 @@ use itertools::Itertools;
 use regex::Regex;
 
 pub(crate) trait BrewUpdateParser {
-    type Iter: Iterator<Item = (Vec<String>, Vec<String>)>;
+    type Items: Iterator<Item = (Vec<String>, Vec<String>)>;
 
     fn messages(&self) -> Result<Vec<String>, Error>;
-    fn information(&self) -> Self::Iter;
+    fn items(&self) -> Self::Items;
 }
 
 #[derive(Clone, Debug)]
@@ -16,14 +16,12 @@ pub struct BrewUpdateData {
 
 impl BrewUpdateData {
     pub(crate) fn new(text: &str) -> Self {
-        BrewUpdateData {
-            text: text.to_owned(),
-        }
+        BrewUpdateData { text: text.to_owned() }
     }
 }
 
 impl BrewUpdateParser for BrewUpdateData {
-    type Iter = impl Iterator<Item = (Vec<String>, Vec<String>)>;
+    type Items = impl Iterator<Item = (Vec<String>, Vec<String>)>;
 
     fn messages(&self) -> Result<Vec<String>, Error> {
         Ok(
@@ -34,7 +32,7 @@ impl BrewUpdateParser for BrewUpdateData {
         )
     }
 
-    fn information(&self) -> Self::Iter {
+    fn items(&self) -> Self::Items {
         self.text
             .lines()
             // When the line starts with "==>", returns (true, value).
@@ -90,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn update_information() {
+    fn update_items() {
         let text = indoc!(
             r#"
                 Updated 1 tap (homebrew/core).
@@ -110,21 +108,38 @@ mod tests {
                 test2
             "#
         );
-        let mut iter = BrewUpdateData::new(text).information();
+        let mut items = BrewUpdateData::new(text).items();
 
         assert_eq!(
-            iter.next(),
-            Some((vec!["==> Updated Formulae".to_owned()], vec!["php".to_owned(), "rust".to_owned(), "typescript".to_owned(), "vim".to_owned()]))
+            items.next(),
+            Some((
+                vec!["==> Updated Formulae".to_owned()],
+                vec![
+                    "php".to_owned(),
+                    "rust".to_owned(),
+                    "typescript".to_owned(),
+                    "vim".to_owned()
+                ]
+            ))
         );
         assert_eq!(
-            iter.next(),
-            Some((vec!["==> Deleted Formulae".to_owned()], vec!["go".to_owned(), "python".to_owned(), "ruby".to_owned()]))
+            items.next(),
+            Some((
+                vec!["==> Deleted Formulae".to_owned()],
+                vec!["go".to_owned(), "python".to_owned(), "ruby".to_owned()]
+            ))
         );
-        assert_eq!(iter.next(), Some((vec!["==> TEST".to_owned()], vec!["test1".to_owned(), "test2".to_owned()])));
-        assert_eq!(iter.next(), None);
+        assert_eq!(
+            items.next(),
+            Some((
+                vec!["==> TEST".to_owned()],
+                vec!["test1".to_owned(), "test2".to_owned()]
+            ))
+        );
+        assert_eq!(items.next(), None);
 
-        let mut empty_iter = BrewUpdateData::new("").information();
+        let mut empty = BrewUpdateData::new("").items();
 
-        assert_eq!(empty_iter.next(), None);
+        assert_eq!(empty.next(), None);
     }
 }

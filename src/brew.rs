@@ -5,7 +5,7 @@ use crate::terminal::*;
 
 pub struct Brew<T>
 where
-    T: Terminal
+    T: Terminal,
 {
     pub update: formatter::BrewUpdate<T>,
     pub outdated: formatter::BrewOutdated,
@@ -13,17 +13,17 @@ where
 
 impl<T> Brew<T>
 where
-    T: Terminal
+    T: Terminal,
 {
     pub fn new(update_text: &str, outdated_text: &str, terminal: T) -> Self {
         let update_data = parser::BrewUpdateData::new(update_text);
         let outdated_data = parser::BrewOutdatedData::new(outdated_text);
-        let update = formatter::BrewUpdate::new(&update_data, &outdated_data, terminal);
-        let outdated = formatter::BrewOutdated::new(&outdated_data);
+        let update_formatter = formatter::BrewUpdate::new(&update_data, &outdated_data, terminal);
+        let outdated_formatter = formatter::BrewOutdated::new(&outdated_data);
 
         Brew {
-            update,
-            outdated,
+            update: update_formatter,
+            outdated: outdated_formatter,
         }
     }
 }
