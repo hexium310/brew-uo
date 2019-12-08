@@ -65,7 +65,10 @@ impl BrewOutdatedDetail {
     {
         BrewOutdatedDetail {
             name: name.to_owned(),
-            current_versions: current_versions.into_iter().map(|v| v.as_ref().to_owned()).collect::<Vec<_>>(),
+            current_versions: current_versions
+                .into_iter()
+                .map(|v| v.as_ref().to_owned())
+                .collect::<Vec<_>>(),
             latest_version: latest_version.to_owned(),
         }
     }
