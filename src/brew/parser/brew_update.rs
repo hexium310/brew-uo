@@ -38,7 +38,7 @@ impl BrewUpdateParser for BrewUpdateData {
             // When the line starts with "==>", returns (true, value).
             .group_by(|v| v.find("==>").is_some())
             .into_iter()
-            .map(|(k, v)| (k, v.map(|v| v.to_owned()).collect::<Vec<_>>()))
+            .map(|(k, v)| (k, v.map(String::from).collect::<Vec<_>>()))
             .batching(|it| {
                 while let Some((kind_bool, kind_value)) = it.next() {
                     if !kind_bool {

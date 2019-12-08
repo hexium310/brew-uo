@@ -21,12 +21,12 @@ impl Version {
     pub fn new<I, T>(current_versions: I, latest_version: &str) -> Version
     where
         I: IntoIterator<Item = T>,
-        T: Into<String>,
+        T: AsRef<str>,
     {
         let delimiters = Version::delimiters(latest_version);
 
         Version {
-            current_versions: current_versions.into_iter().map(Into::into).collect(),
+            current_versions: current_versions.into_iter().map(|v| v.as_ref().to_owned()).collect(),
             latest_version: latest_version.to_owned(),
             delimiters,
         }

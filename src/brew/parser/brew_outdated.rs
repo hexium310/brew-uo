@@ -58,10 +58,14 @@ pub struct BrewOutdatedDetail {
 }
 
 impl BrewOutdatedDetail {
-    pub fn new(name: &str, current_versions: &[&str], latest_version: &str) -> Self {
+    pub fn new<I, T>(name: &str, current_versions: I, latest_version: &str) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        T: AsRef<str>,
+    {
         BrewOutdatedDetail {
             name: name.to_owned(),
-            current_versions: current_versions.iter().map(|&v| v.to_string()).collect::<Vec<_>>(),
+            current_versions: current_versions.into_iter().map(|v| v.as_ref().to_owned()).collect::<Vec<_>>(),
             latest_version: latest_version.to_owned(),
         }
     }

@@ -59,11 +59,11 @@ where
     fn tabulate<I, S>(&self, f: I) -> String
     where
         I: IntoIterator<Item = S>,
-        S: Into<String>,
+        S: AsRef<str>,
     {
-        let formulae = f.into_iter().map(Into::into).collect::<Vec<_>>();
+        let formulae = f.into_iter().map(|v| v.as_ref().to_owned()).collect::<Vec<_>>();
 
-        if formulae == [""] {
+        if formulae == ["".to_owned()] {
             return "".to_owned();
         }
 
@@ -72,7 +72,7 @@ where
 
         let formulae_length = formulae.len();
         let terminal_width = self.terminal.width().unwrap_or(0);
-        let formula_name_lengths = formulae.iter().map(|formula| formula.len()).collect::<Vec<usize>>();
+        let formula_name_lengths = formulae.iter().map(String::len).collect::<Vec<usize>>();
         let column_number = (terminal_width + gap_size) / (formula_name_lengths.iter().max().unwrap_or(&0) + gap_size);
 
         if column_number < 2 {
