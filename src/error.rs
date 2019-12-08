@@ -4,6 +4,7 @@ use std::fmt;
 pub enum Error {
     Regex(regex::Error),
     Csv(csv::Error),
+    Command(std::io::Error),
     NoneCapturesError,
     TerminalWidthError,
 }
@@ -13,6 +14,7 @@ impl fmt::Display for Error {
         match self {
             Error::Regex(ref err) => write!(fmt, "{}", err),
             Error::Csv(ref err) => write!(fmt, "{}", err),
+            Error::Command(ref err) => write!(fmt, "{}", err),
             Error::NoneCapturesError => write!(fmt, "Can not capture groups."),
             Error::TerminalWidthError => write!(fmt, "Can not get the terminal size."),
         }
@@ -28,5 +30,11 @@ impl From<regex::Error> for Error {
 impl From<csv::Error> for Error {
     fn from(err: csv::Error) -> Error {
         Error::Csv(err)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::Command(err)
     }
 }

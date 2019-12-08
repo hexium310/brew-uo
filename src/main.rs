@@ -10,16 +10,22 @@ mod terminal;
 mod version;
 
 use crate::brew::Brew;
+use crate::error::Error;
 use crate::terminal::*;
 use colored::Colorize;
 use std::process::{exit, Command};
 
 fn main() {
-    let update_result = run_update();
-    let outdated_result = run_outdated();
+    let update_result = run_update().unwrap_or_else(|err| {
+        println!("command error: {}", err);
+        "".to_owned()
+    });
+    let outdated_result = run_outdated().unwrap_or_else(|err| {
+        println!("command error: {}", err);
+        "".to_owned()
+    });
 
     let terminal = TerminalInfo {};
-
     let brew = Brew::new(&update_result, &outdated_result, terminal);
 
     match brew.update.format() {
@@ -47,18 +53,18 @@ fn main() {
     }
 }
 
-fn run_outdated() -> String {
-    let result = Command::new("brew").args(&["outdated", "--verbose"]).output().unwrap();
-    stringify(result.stdout)
+fn run_outdated() -> Result<String, Error> {
+    let result = Command::new("brew").args(&["outdated", "--verbose"]).output()?;
+    Ok(stringify(&result.stdout))
 }
 
-fn run_update() -> String {
-    let result = Command::new("brew").arg("update").output().unwrap();
-    stringify(result.stdout)
+fn run_update() -> Result<String, Error> {
+    let result = Command::new("exit").arg("update").output()?;
+    Ok(stringify(&result.stdout))
 }
 
-fn stringify(value: Vec<u8>) -> String {
-    String::from_utf8(value).unwrap_or_else(|_| "".to_owned())
+fn stringify(value: &[u8]) -> String {
+    String::from_utf8(value.to_owned()).unwrap_or_else(|_| "".to_owned())
 }
 
 // #[test]
