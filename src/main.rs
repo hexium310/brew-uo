@@ -29,7 +29,7 @@ fn main() {
     let brew = Brew::new(&update_result, &outdated_result, terminal);
 
     match brew.update.format() {
-        Ok(output) if output != "" => {
+        Ok(output) if &output != "" => {
             println!("{}", output);
         },
         Ok(_) => (),
@@ -59,7 +59,7 @@ fn run_outdated() -> Result<String, Error> {
 }
 
 fn run_update() -> Result<String, Error> {
-    let result = Command::new("exit").arg("update").output()?;
+    let result = Command::new("brew").arg("update").output()?;
     Ok(stringify(&result.stdout))
 }
 

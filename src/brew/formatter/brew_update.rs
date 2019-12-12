@@ -33,8 +33,8 @@ where
     T: Terminal,
 {
     pub fn format(&self) -> Result<String, Error> {
-        Ok(self
-            .update_data
+        let update_data = &self.update_data;
+        let items = update_data
             .items()
             .map(|(kinds, formulae)| {
                 let table = self.tabulate(&formulae);
@@ -45,7 +45,18 @@ where
 
                 format!("{}\n{}", kind, table)
             })
-            .join("\n"))
+            .join("\n");
+        let messages = update_data.messages()?.join("\n");
+
+        if items.is_empty() {
+            return Ok(messages);
+        }
+
+        if messages.is_empty() {
+            return Ok(items);
+        }
+
+        Ok(format!("{}\n{}", messages, items))
     }
 
     fn colorize_kind(kind: &str) -> Result<String, Error> {

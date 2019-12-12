@@ -1,29 +1,19 @@
+use super::Parser;
 use crate::error::Error;
 use itertools::Itertools;
 use regex::Regex;
 
-pub(crate) trait BrewUpdateParser {
-    type Items: Iterator<Item = (Vec<String>, Vec<String>)>;
-
-    fn messages(&self) -> Result<Vec<String>, Error>;
-    fn items(&self) -> Self::Items;
-}
-
 #[derive(Clone, Debug)]
 pub struct BrewUpdateData {
-    pub(crate) text: String,
+    text: String,
 }
 
 impl BrewUpdateData {
     pub(crate) fn new(text: &str) -> Self {
         BrewUpdateData { text: text.to_owned() }
     }
-}
 
-impl BrewUpdateParser for BrewUpdateData {
-    type Items = impl Iterator<Item = (Vec<String>, Vec<String>)>;
-
-    fn messages(&self) -> Result<Vec<String>, Error> {
+    pub(crate) fn messages(&self) -> Result<Vec<String>, Error> {
         Ok(
             Regex::new(r"(?m)^(?:Updated .+|Already up-to-date\.|No changes to formulae\.)$(?-m)")?
                 .captures_iter(&self.text)
@@ -31,6 +21,11 @@ impl BrewUpdateParser for BrewUpdateData {
                 .collect::<Vec<_>>(),
         )
     }
+}
+
+impl Parser for BrewUpdateData {
+    type IteratorItem = (Vec<String>, Vec<String>);
+    type Items = impl Iterator<Item = Self::IteratorItem>;
 
     fn items(&self) -> Self::Items {
         self.text

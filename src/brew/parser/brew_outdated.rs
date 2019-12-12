@@ -1,13 +1,6 @@
+use super::Parser;
 use crate::version::*;
 use regex::Regex;
-
-pub(crate) trait BrewOutdatedParser {
-    type Items: Iterator<Item = BrewOutdatedDetail>;
-
-    fn items(&self) -> Self::Items;
-    fn detail(formula: &str) -> Option<BrewOutdatedDetail>;
-    fn names(&self) -> Vec<String>;
-}
 
 #[derive(Clone, Debug)]
 pub struct BrewOutdatedData {
@@ -15,13 +8,13 @@ pub struct BrewOutdatedData {
 }
 
 impl BrewOutdatedData {
-    pub fn new(text: &str) -> Self {
+    pub(crate) fn new(text: &str) -> Self {
         BrewOutdatedData { text: text.to_owned() }
     }
-}
 
-impl BrewOutdatedParser for BrewOutdatedData {
-    type Items = impl Iterator<Item = BrewOutdatedDetail>;
+    pub(crate) fn names(&self) -> Vec<String> {
+        self.items().map(|v| v.name).collect()
+    }
 
     fn detail(formula: &str) -> Option<BrewOutdatedDetail> {
         match Regex::new(r"(?P<name>.+)\s\((?P<current_versions>.+)\)\s<\s(?P<latest_version>.+)")
@@ -36,6 +29,11 @@ impl BrewOutdatedParser for BrewOutdatedData {
             None => None,
         }
     }
+}
+
+impl Parser for BrewOutdatedData {
+    type IteratorItem = BrewOutdatedDetail;
+    type Items = impl Iterator<Item = Self::IteratorItem>;
 
     fn items(&self) -> Self::Items {
         self.text
@@ -43,10 +41,6 @@ impl BrewOutdatedParser for BrewOutdatedData {
             .filter_map(Self::detail)
             .collect::<Vec<_>>()
             .into_iter()
-    }
-
-    fn names(&self) -> Vec<String> {
-        self.items().map(|v| v.name).collect()
     }
 }
 
