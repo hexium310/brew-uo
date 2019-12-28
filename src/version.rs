@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::range::*;
+use std::ops::Bound::*;
 use colored::{Color, Colorize};
 use itertools::EitherOrBoth::Both;
 use itertools::Itertools;
@@ -106,30 +107,24 @@ impl Version {
     where
         R: std::ops::RangeBounds<usize>,
     {
-        use std::ops::Bound::*;
-        match version_range.start_bound() {
-            Included(&v) | Excluded(&v) => match delimiter_range.start_bound() {
-                Included(&d) | Excluded(&d) if v != d => return Err(Error::NoCapturesError),
-                _ => println!("sd"),
-            },
-            _ => println!("sv"),
+        match (version_range.start_bound(), delimiter_range.start_bound()) {
+            (Included(&v), Included(&d)) | (Excluded(&v), Excluded(&d)) if v != d => panic!("{}", Error::VersionRangeStartError),
+            _ => (),
         };
-        match version_range.end_bound() {
-            Included(&v) | Excluded(&v) => match delimiter_range.end_bound() {
-                Included(&d) | Excluded(&d) if v <= d => return Err(Error::NoCapturesError),
-                _ => println!("ed"),
-            },
-            _ => println!("ev"),
+
+        match (version_range.end_bound(), delimiter_range.end_bound()) {
+            (Included(&v), Included(&d)) | (Excluded(&v), Excluded(&d)) if v <= d => panic!("{}", Error::VersionRangeEndError),
+            _ => (),
         };
 
         let version_parts_with_range = version_parts
             .range(&version_range)
-            .ok_or(Error::NoCapturesError)?
+            .ok_or(Error::IndexOutOfRange)?
             .map(|v| v.to_string());
         let delimiters_with_range = self
             .delimiters
             .range(&delimiter_range)
-            .ok_or(Error::NoCapturesError)?
+            .ok_or(Error::IndexOutOfRange)?
             .map(|v| v.to_string());
 
         Ok(version_parts_with_range.interleave(delimiters_with_range).join(""))
@@ -140,18 +135,25 @@ impl Version {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_build_version() {
+    fn before<'a>() -> (Version, Vec<version_compare::version_part::VersionPart<'a>>) {
         let latest_version = "1.0.0_1";
         let version = Version::new(&[""], latest_version);
-        let v = version_compare::Version::from(latest_version).unwrap();
-        let parts = v.parts();
+        let mut parts: Vec<VersionPart> = vec![];
+        for part in version_compare::Version::from(latest_version).unwrap().parts() {
+            parts.push(match part {
+                VersionPart::Number(v) => VersionPart::Number(*v),
+                VersionPart::Text(v) => VersionPart::Text(v),
+            })
+        }
 
-        assert!(version.build_version(parts, ..0, ..0).is_err());
-        assert!(version.build_version(parts, 4.., 3..).is_err());
+        (version, parts)
+    }
 
-        assert!(version.build_version(parts, ..10, ..9).is_err());
-        assert!(version.build_version(parts, 10.., 10..).is_err());
+    #[test]
+    fn build_version_should_return_string() {
+        let before = before();
+        let version = before.0;
+        let parts = &before.1;
 
         assert_eq!(version.build_version(parts, ..1, ..0).ok(), Some("1".to_owned()));
         assert_eq!(version.build_version(parts, ..2, ..1).ok(), Some("1.0".to_owned()));
@@ -162,5 +164,25 @@ mod tests {
         assert_eq!(version.build_version(parts, 1.., 1..).ok(), Some("0.0_1".to_owned()));
         assert_eq!(version.build_version(parts, 2.., 2..).ok(), Some("0_1".to_owned()));
         assert_eq!(version.build_version(parts, 3.., 3..).ok(), Some("1".to_owned()));
+    }
+
+    #[test]
+    #[should_panic(expected = "same")]
+    fn build_version_should_panic_when_passed_two_ranges_start_is_not_same() {
+        let before = before();
+        let version = before.0;
+        let parts = &before.1;
+
+        let _ = version.build_version(parts, 0.., 1..);
+    }
+
+    #[test]
+    #[should_panic(expected = "greater than")]
+    fn test_should_panic_build_version_first_range_end_not_greater_than_second_range_end() {
+        let before = before();
+        let version = before.0;
+        let parts = &before.1;
+
+        let _ = version.build_version(parts, ..1, ..1);
     }
 }

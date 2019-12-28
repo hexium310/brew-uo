@@ -4,7 +4,10 @@ use std::fmt;
 pub enum Error {
     Csv(csv::Error),
     Command(std::io::Error),
+    IndexOutOfRange,
     NoCapturesError,
+    VersionRangeEndError,
+    VersionRangeStartError,
     TerminalWidthError,
 }
 
@@ -13,6 +16,9 @@ impl fmt::Display for Error {
         match self {
             Error::Csv(ref err) => write!(fmt, "{}", err),
             Error::Command(ref err) => write!(fmt, "{}", err),
+            Error::IndexOutOfRange => write!(fmt, "The index out of range."),
+            Error::VersionRangeEndError => write!(fmt, "The end of range have to be greater than the end of another range."),
+            Error::VersionRangeStartError => write!(fmt, "The start of two ranges have to be the same."),
             Error::NoCapturesError => write!(fmt, "Can not capture groups."),
             Error::TerminalWidthError => write!(fmt, "Can not get the terminal size."),
         }
