@@ -1,0 +1,89 @@
+name: Rust
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macOS-latest]
+        rust: [nightly]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Cache cargo registry
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    - name: Cache cargo index
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    - name: Cache cargo build
+      uses: actions/cache@v1
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    - name: Set up a Rust toolchain
+      uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: ${{ matrix.rust }}
+    - name: Run tests
+      run: cargo test --verbose
+    - name: Build
+      run: cargo build --release --verbose
+    - name: Pack
+      run: |
+        cd target/release
+        tar zcvf "macos.tar.gz" brew-uo
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: "target/release/macos.tar.gz"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Checkout homebrew tap repository
+      uses: actions/checkout@v2
+      with:
+        repository: hexium310/homebrew-brew-uo
+        path: homebrew-brew-uo
+    - name: Update formula
+      env:
+        PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      run: |
+        rm -r .git/
+        cd homebrew-brew-uo
+        url=$(cat brew-uo.rb | awk -v version="${GITHUB_REF##*/}" '
+            function extract_value(input, key) {
+                match(input, key)
+                input = substr($0, RSTART + RLENGTH)
+                gsub("\"", "", input)
+                return input
+            }
+            /^ *REPOSITORY_URL/ {
+                repository = extract_value($0, "REPOSITORY_URL = ")
+            }
+            /^ *url/ {
+                url = extract_value($0, "url ")
+            }
+            END {
+                gsub("#{REPOSITORY_URL}", repository, url)
+                gsub("#{VERSION}", version, url)
+                print url
+            }
+        ')
+        hash=$(shasum -a 256 "../target/release/macos.tar.gz" | awk '{ print $1 }')
+        sed -i '' -e 's/\(VERSION = \).*/\1"'"${GITHUB_REF##*/}"'"/' -e 's/\(sha256 \).*/\1"'"$hash"'"/' brew-uo.rb
+
+        git config user.email "hexium310@gmail.com"
+        git config user.name "Hexin"
+        git diff
+        git commit -am "Update version to ${GITHUB_REF##*/}"
+        git push "https://${GITHUB_ACTOR}:${PERSONAL_ACCESS_TOKEN}@github.com/hexium310/homebrew-brew-uo.git" master
