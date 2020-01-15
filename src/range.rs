@@ -1,5 +1,5 @@
-pub trait Range<T>: std::ops::Deref<Target = [T]> {
-    fn range<R>(&self, range: R) -> std::slice::Iter<T>
+pub(crate) trait Range<T>: std::ops::Deref<Target = [T]> {
+    fn range<R>(&self, range: &R) -> Option<std::slice::Iter<T>>
     where
         R: std::ops::RangeBounds<usize>,
     {
@@ -15,7 +15,7 @@ pub trait Range<T>: std::ops::Deref<Target = [T]> {
             std::ops::Bound::Unbounded => len,
         };
 
-        self[start..end].iter()
+        self.get(start..end).map(|v| v.iter())
     }
 }
 

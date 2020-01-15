@@ -1,4 +1,6 @@
-use crate::range::Range;
+use crate::error::Error;
+use crate::range::*;
+use std::ops::Bound::*;
 use colored::{Color, Colorize};
 use itertools::EitherOrBoth::Both;
 use itertools::Itertools;
@@ -17,7 +19,7 @@ impl Version {
         I: IntoIterator<Item = T>,
         T: AsRef<str>,
     {
-        let delimiters = Version::delimiters(latest_version);
+        let delimiters = Self::generate_delimiters(latest_version);
 
         Version {
             current_versions: current_versions.into_iter().map(|v| v.as_ref().to_owned()).collect(),
@@ -37,16 +39,19 @@ impl Version {
                     || latest_version.to_string(),
                     |position| {
                         let (latest_version_parts_without_change, between_delimiter) =
-                            if let Some(p) = position.checked_sub(1) {
-                                (
-                                    self.build_version(latest_version_parts, ..position, ..p),
-                                    self.delimiters[p].to_owned(),
-                                )
-                            } else {
-                                ("".to_owned(), "".to_owned())
-                            };
+                            position.checked_sub(1).map_or_else(
+                                || ("".to_owned(), "".to_owned()),
+                                |delimiters_position| {
+                                    (
+                                        self.build_version(latest_version_parts, ..position, ..delimiters_position)
+                                            .unwrap(),
+                                        self.delimiters[delimiters_position].to_owned(),
+                                    )
+                                },
+                            );
                         let latest_version_parts_with_change = self
                             .build_version(latest_version_parts, position.., position..)
+                            .unwrap()
                             .color(match position {
                                 0 => Color::Red,
                                 1 => Color::Blue,
@@ -64,7 +69,7 @@ impl Version {
         )
     }
 
-    fn delimiters(version_str: &str) -> Vec<String> {
+    fn generate_delimiters(version_str: &str) -> Vec<String> {
         let delimiter_chars = ['.', '_'];
 
         version_str
@@ -93,14 +98,91 @@ impl Version {
         )
     }
 
-    fn build_version<R>(&self, version_parts: &[VersionPart], version_range: R, delimiter_range: R) -> String
+    fn build_version<R>(
+        &self,
+        version_parts: &[VersionPart],
+        version_range: R,
+        delimiter_range: R,
+    ) -> Result<String, Error>
     where
         R: std::ops::RangeBounds<usize>,
     {
-        version_parts
-            .range(version_range)
-            .map(|v| v.to_string())
-            .interleave(self.delimiters.range(delimiter_range).map(|v| v.to_string()))
-            .join("")
+        match (version_range.start_bound(), delimiter_range.start_bound()) {
+            (Included(&v), Included(&d)) | (Excluded(&v), Excluded(&d)) if v != d => panic!("{}", Error::VersionRangeStartError),
+            _ => (),
+        };
+
+        match (version_range.end_bound(), delimiter_range.end_bound()) {
+            (Included(&v), Included(&d)) | (Excluded(&v), Excluded(&d)) if v <= d => panic!("{}", Error::VersionRangeEndError),
+            _ => (),
+        };
+
+        let version_parts_with_range = version_parts
+            .range(&version_range)
+            .ok_or(Error::IndexOutOfRange)?
+            .map(|v| v.to_string());
+        let delimiters_with_range = self
+            .delimiters
+            .range(&delimiter_range)
+            .ok_or(Error::IndexOutOfRange)?
+            .map(|v| v.to_string());
+
+        Ok(version_parts_with_range.interleave(delimiters_with_range).join(""))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn before<'a>() -> (Version, Vec<version_compare::version_part::VersionPart<'a>>) {
+        let latest_version = "1.0.0_1";
+        let version = Version::new(&[""], latest_version);
+        let mut parts: Vec<VersionPart> = vec![];
+        for part in version_compare::Version::from(latest_version).unwrap().parts() {
+            parts.push(match part {
+                VersionPart::Number(v) => VersionPart::Number(*v),
+                VersionPart::Text(v) => VersionPart::Text(v),
+            })
+        }
+
+        (version, parts)
+    }
+
+    #[test]
+    fn build_version_should_return_string() {
+        let before = before();
+        let version = before.0;
+        let parts = &before.1;
+
+        assert_eq!(version.build_version(parts, ..1, ..0).ok(), Some("1".to_owned()));
+        assert_eq!(version.build_version(parts, ..2, ..1).ok(), Some("1.0".to_owned()));
+        assert_eq!(version.build_version(parts, ..3, ..2).ok(), Some("1.0.0".to_owned()));
+        assert_eq!(version.build_version(parts, ..4, ..3).ok(), Some("1.0.0_1".to_owned()));
+
+        assert_eq!(version.build_version(parts, 0.., 0..).ok(), Some("1.0.0_1".to_owned()));
+        assert_eq!(version.build_version(parts, 1.., 1..).ok(), Some("0.0_1".to_owned()));
+        assert_eq!(version.build_version(parts, 2.., 2..).ok(), Some("0_1".to_owned()));
+        assert_eq!(version.build_version(parts, 3.., 3..).ok(), Some("1".to_owned()));
+    }
+
+    #[test]
+    #[should_panic(expected = "same")]
+    fn build_version_should_panic_when_passed_two_ranges_start_is_not_same() {
+        let before = before();
+        let version = before.0;
+        let parts = &before.1;
+
+        let _ = version.build_version(parts, 0.., 1..);
+    }
+
+    #[test]
+    #[should_panic(expected = "greater than")]
+    fn test_should_panic_build_version_first_range_end_not_greater_than_second_range_end() {
+        let before = before();
+        let version = before.0;
+        let parts = &before.1;
+
+        let _ = version.build_version(parts, ..1, ..1);
     }
 }
