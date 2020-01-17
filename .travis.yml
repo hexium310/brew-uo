@@ -1,0 +1,72 @@
+language: rust
+rust:
+  - nightly
+
+os:
+  - osx
+
+env:
+  global:
+    secure: "l28Z8nLDiXIF29e0jhhRuXvTnxaX8E/7c49feWCSkxKVMb5nSUzMty488UOdth5+BJKcXYcVtwOxCCgHvqyGtib5B5sjE+/1pjms8O50phmj84bXwWwot+0zTz9t5iVpH3iDapW1pnQn9EqrmdKbBG8BtpHX+P+VXY/kszOq6Zi45Gu0aIcC1UOoy64gLaDFox1jaJUy/a+fELWhP4ptkHpt9B2MvCha7ChaABi7iC9RNuO5gdvgTgzKoWvoGvgSqJcbb712JeIMu/hxh47ZeUEciwS7S+oZouf8stap5DHA4HuuCosG1dbSiHhxS+S6NKlJ6iQMe1OuNGtzGPMFf+fjVNgFnAN5Y7UXomG0a2Z5HVqyVF65DizLQrQGqVGyk0yGgx8/2itByLErEzjaZLglt+WWkMXpTpKVTgRv99nanV5AAoB4pwkqSh34QtTeoQbqmrQP7HIsF7JwCsJBDAnhnCULKYgpPUV6Suf26yyyVRzF1W41Q3A69j0/3wJpXtInBo1PRvuW2gpjOvBTFBm8mVC3rzOaaL3xsONSnsb7RYSRWNnEkwsO14+CSk3XFqaDUVzylNjO6xB7dmdw6khklqzImKzJT37zxOnmxsbwZCDyHR/F6uRQYOp6NB17QCIuV1lCVp+pLwlUZheaaiBg4yhq55BKVW6SaQB6pxY="
+
+cache:
+  directories:
+    - $HOME/.cargo
+    - $HOME/.rustup
+
+before_cache:
+  - rm -rf $HOME/.cargo/registry
+
+branches:
+  only:
+    - "/^[0-9\\.]+/"
+
+script:
+  - cargo test --verbose
+  - cargo build --release --verbose
+
+before_deploy: |
+  cd target/release
+  tar zcvf macos.tar.gz brew-uo
+  cd ../../
+
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key:
+    secure: "AR8a2bvRGeETCUWmkIfzIzMwBMSJ04xTrBJ7LPiRZiMc6BcMRumetuqE8OpzM45bxzbZ7A98C3hhTHz5SUKm4sNqhSz62tS0WWaYHigzz+9AExavhgxQvUftcA0NoHpFgvS/EHSo/WZckdj0hcfHcfx76jJbwH3qleFR7rKwctrRZ+QPKt2djhNwIVCBGl/iHgxBwdAgemiMUUaVrjivxzPCe+7j3Hj0PeIfhZNu5K7klx4RxwW16oo7BRdJXJBEF4ZFISCNAFmW9u8LVKHNRMlKXydkv68fEA135PqsIrKNrIaG9oNKQSpYHEVjUDhgAu7zAWp/2c8wSyM6y+gGPh1m5DpkdDtfVVV+3Us2CicGxm4gqbEUHQMsG9FgygWto6jepP57CH0mHgkJelAL4vu8FGdKz0sqxdZkDQw+hD4qj25uHNWyh+S85H62zx4u9Tzxm8W3ma7TZkSisFkWdSqgEZSWWMimc5vsC2QjxJrkAOiwfVMmqxsLTtO5A+JhpNj4Nzw+xRul2WALcc45fhEn4BqLwhWKUi2H/mDocRxUPWt8kiR8tz1kOZAHr/YANrycuG7Kr7H1i/yEp5UY7D1HKg+LJ54jlQtyntqgxU1xTEFEEwVMvLIuWvuNV3m6f2eN/KwoKxWV54cjANPa5F/p/vemdWqNaaTqkWMZSdc="
+  file:
+    - target/release/macos.tar.gz
+  on:
+    tags: true
+
+after_deploy: |
+  git clone https://github.com/hexium310/homebrew-brew-uo.git
+  cd homebrew-brew-uo
+  url=$(cat brew-uo.rb | awk -v version="${GITHUB_REF##*/}" '
+      function extract_value(input, key) {
+          match(input, key)
+          input = substr($0, RSTART + RLENGTH)
+          gsub("\"", "", input)
+          return input
+      }
+      /^ *REPOSITORY_URL/ {
+          repository = extract_value($0, "REPOSITORY_URL = ")
+      }
+      /^ *url/ {
+          url = extract_value($0, "url ")
+      }
+      END {
+          gsub("#{REPOSITORY_URL}", repository, url)
+          gsub("#{VERSION}", version, url)
+          print url
+      }
+  ')
+  hash=$(shasum -a 256 "../target/release/macos.tar.gz" | awk '{ print $1 }')
+  sed -i '' -e 's/\(VERSION = \).*/\1"'"$TRAVIS_TAG"'"/' -e 's/\(sha256 \).*/\1"'"$hash"'"/' brew-uo.rb
+
+  git config user.email "hexium310@gmail.com"
+  git config user.name "Hexin"
+  git diff
+  git commit -am "Update version to $TRAVIS_TAG"
+  git push "https://$ACCESS_TOKEN@github.com/hexium310/homebrew-brew-uo.git" master
