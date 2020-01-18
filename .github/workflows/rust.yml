@@ -78,7 +78,7 @@ jobs:
                   print url
               }
           ')
-          curl -LO "https://github.com/hexium310/brew-uo/releases/download/${GITHUB_REF##*/}/macos.tar.gz"
+          curl -fLO "https://github.com/hexium310/brew-uo/releases/download/${GITHUB_REF##*/}/macos.tar.gz"
           hash=$(shasum -a 256 macos.tar.gz | awk '{ print $1 }')
           sed -i '' -e 's/\(VERSION = \).*/\1"'"${GITHUB_REF##*/}"'"/' -e 's/\(sha256 \).*/\1"'"$hash"'"/' brew-uo.rb
 
