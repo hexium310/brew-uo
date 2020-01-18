@@ -69,8 +69,4 @@ after_deploy: |
   git config user.name "Hexin"
   git diff
   git commit -am "Update version to $TRAVIS_TAG"
-  git push "https://$ACCESS_TOKEN@github.com/hexium310/homebrew-brew-uo.git" master > /dev/null 2>&1
-
-notifications:
-  slack:
-    secure: "sA+zfDaMh8vm+znVvADJBTwAdfhH1JXEgyvjxOPUO7eeo40z3A00QRCpZaKhmujdjyiHVld66nA8tQnJmhFC2FpkXGv2HXi3P+X74bTZZw6Es4RnbxRi4Bi6KfHNJ3lFDKoct3h7ntP3DJOAezq2GaLrMsZfN8dbYxqxe9AmhbwuudxcQ8pxD+c2gWiyV/aKOz4BiFQmf/IY6a0J/9XK1FFr1mcEOeVx3H4tKGWL9nO6vtgo3hmJO3ASbgNEjhAgbKTcl4/I4K3CC9NYrfne0Sh/y2WLhpX5CRkCn9pXZ6SvIXWYdiKtw7JmkkIbp19HMFInvz+cGoTsmAczIhnpGDaYAkOvfnh4gtwPYoleU0SiqS/EiHCLyODKQhKfnkAdjNx9NyiywsIoMyZnBSvFAIzfVTyPn6iYPMh90/F+/FAUT9QXR/QRl2ThCL5NGN6oXc+rQdC0wakAs08au/DRBiLv9K/nEKEbzzn3ORowQUiWIJJQkLhvRzwEMFBHVTLaKcGaGwttRa8r4CChK10A7RvGZmcf5Ipo6eJ4q11hg3GquVwz1wVjK+uBz7Nreqqup1D/hZAt8kfkrT3/QE/Gh3+dVmk1OXp6dhCDgi4nBUcWy/k3wSxrjWBqIaWVUKhaWd8ZIUZF+P6P7w1p9qyod//FrSFHqKju3jq6xTX5qJo="
+  git push "https://$ACCESS_TOKEN@github.com/hexium310/homebrew-brew-uo.git" master
