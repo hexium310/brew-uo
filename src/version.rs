@@ -70,7 +70,7 @@ impl Version {
     }
 
     fn generate_delimiters(version_str: &str) -> Vec<String> {
-        let delimiter_chars = ['.', '_'];
+        let delimiter_chars = ['.', '_', '-'];
 
         version_str
             .matches(|version_char| {
@@ -147,6 +147,11 @@ mod tests {
         }
 
         (version, parts)
+    }
+
+    #[test]
+    fn generate_delimiters_should_return_delimiters_list() {
+        assert_eq!(Version::generate_delimiters("1.2_3-4"), [".".to_owned(), "_".to_owned(), "-".to_owned()]);
     }
 
     #[test]
