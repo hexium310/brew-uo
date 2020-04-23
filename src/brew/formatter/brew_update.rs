@@ -128,4 +128,47 @@ where
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_should_be_tabulate_formulae() {
+        pub struct TerminalInfoMock {}
+        impl Terminal for TerminalInfoMock {
+            fn width(&self) -> Result<usize, Error> {
+                let (width, _) = (100, 0);
+
+                Ok(width)
+            }
+        }
+
+
+        let brew_update = BrewUpdate::new(
+            &BrewUpdateData::new(""),
+            &BrewOutdatedData::new(""),
+            TerminalInfoMock {}
+        );
+        let formulae = ([
+            "appium",
+            "gitlab-gem",
+            "glooctl",
+            "golang-migrate",
+            "gsoap",
+            "hugo",
+            "inspircd",
+            "libarchive",
+            "nanopb-generator",
+            "root",
+            "travis",
+            "wpscan",
+            "wtfutil",
+            "zeek",
+        ].iter().map(|v| v.to_string()).collect::<Vec<_>>(),);
+        let tabulated = brew_update.tabulate(formulae.0);
+
+        assert_eq!(
+            tabulated,
+            "appium              golang-migrate      inspircd            root                wtfutil  \ngitlab-gem          gsoap               libarchive          travis              zeek  \nglooctl             hugo                nanopb-generator    wpscan  ".to_owned()
+        );
+    }
+}
