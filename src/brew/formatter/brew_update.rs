@@ -132,7 +132,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_should_be_tabulate_formulae() {
+    fn tabulate_should_be_tabulate_formulae() {
         pub struct TerminalInfoMock {}
         impl Terminal for TerminalInfoMock {
             fn width(&self) -> Result<usize, Error> {
