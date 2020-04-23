@@ -96,7 +96,7 @@ where
 
         (0..row_number)
             .map(|nth_row| {
-                let row_item_indices = (nth_row..(formulae_length - 1)).step_by(row_number);
+                let row_item_indices = (nth_row..formulae_length).step_by(row_number);
                 let row_item_number = row_item_indices.len();
 
                 row_item_indices
