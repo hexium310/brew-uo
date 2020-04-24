@@ -90,7 +90,8 @@ impl Version {
                     .zip_longest(newest_current_version.parts().iter())
                     .position(|v| match v {
                         Both(left, right) => {
-                            VersionCompare::compare_to(&left.to_string(), &right.to_string(), &CompOp::Ne).unwrap()
+                            VersionCompare::compare_to(&left.to_string(), &right.to_string(), &CompOp::Ne)
+                                .unwrap_or_else(|_| left.to_string() != right.to_string())
                         },
                         _ => true,
                     })
@@ -152,6 +153,30 @@ mod tests {
     #[test]
     fn generate_delimiters_should_return_delimiters_list() {
         assert_eq!(Version::generate_delimiters("1.2_3-4"), [".".to_owned(), "_".to_owned(), "-".to_owned()]);
+    }
+
+    #[test]
+    fn find_different_part_position_should_return_position() {
+        let latest_version = "1.0";
+        let version = Version::new(&["2.0"], latest_version);
+        let v = version_compare::Version::from(latest_version).unwrap();
+        let latest_version_parts = v.parts();
+
+        assert_eq!(version.find_different_part_position(latest_version_parts), Some(0));
+
+        let latest_version = "1.0b";
+        let version = Version::new(&["1.0a"], latest_version);
+        let v = version_compare::Version::from(latest_version).unwrap();
+        let latest_version_parts = v.parts();
+
+        assert_eq!(version.find_different_part_position(latest_version_parts), Some(1));
+
+        let latest_version = "1.0";
+        let version = Version::new(&["1.0"], latest_version);
+        let v = version_compare::Version::from(latest_version).unwrap();
+        let latest_version_parts = v.parts();
+
+        assert_eq!(version.find_different_part_position(latest_version_parts), None);
     }
 
     #[test]
