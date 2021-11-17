@@ -12,10 +12,6 @@ impl BrewOutdatedData {
         BrewOutdatedData { text: text.to_owned() }
     }
 
-    pub(crate) fn names(&self) -> Vec<String> {
-        self.items().map(|v| v.name).collect()
-    }
-
     fn detail(formula: &str) -> Option<BrewOutdatedDetail> {
         match Regex::new(r"(?P<name>.+)\s\((?P<current_versions>.+)\)\s<\s(?P<latest_version>.+)")
             .unwrap()

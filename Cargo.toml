@@ -11,5 +11,5 @@ regex = "1"
 version-compare = "0.0.10"
 itertools = "0.8"
 prettytable-rs = "0.8"
-term_size = "0.3"
-indoc = "0.3"
+
+[features]
