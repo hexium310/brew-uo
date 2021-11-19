@@ -3,13 +3,13 @@ use crate::brew::version::*;
 use prettytable::{format, Table};
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Outdated {
     pub formulae: Vec<Formula>,
     pub casks: Vec<Formula>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Formula {
     name: String,
     installed_versions: Vec<String>,
@@ -39,5 +39,149 @@ impl Outdated {
         writer.flush().unwrap();
         let csv = String::from_utf8(writer.into_inner()?)?;
         Ok(csv)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_returns_outdated_struct() {
+        let data = r#"
+            {
+              "formulae": [
+                {
+                  "name": "php",
+                  "installed_versions": [
+                    "8.0.12"
+                  ],
+                  "current_version": "8.0.13",
+                  "pinned": false,
+                  "pinned_version": null
+                }
+              ],
+              "casks": [
+                {
+                  "name": "powershell",
+                  "installed_versions": [
+                    "7.1.0"
+                  ],
+                  "current_version": "7.2.0",
+                  "pinned": false,
+                  "pinned_version": null
+                }
+              ]
+            }
+        "#;
+        assert_eq!(Outdated::new(data).unwrap(), Outdated {
+            formulae: vec![
+                Formula {
+                    name: "php".to_owned(),
+                    installed_versions: vec!["8.0.12".to_owned()],
+                    current_version: "8.0.13".to_owned(),
+                },
+            ],
+            casks: vec![
+                Formula {
+                    name: "powershell".to_owned(),
+                    installed_versions: vec!["7.1.0".to_owned()],
+                    current_version: "7.2.0".to_owned(),
+                },
+            ],
+        });
+
+        let data = r#"
+            {
+              "formulae": [
+
+              ],
+              "casks": [
+
+              ]
+            }
+        "#;
+        assert_eq!(Outdated::new(data).unwrap(), Outdated {
+            formulae: vec![],
+            casks: vec![],
+        });
+    }
+
+    #[test]
+    fn to_csv_returns_csv_with_color() {
+        use colored::Colorize;
+
+        let data = r#"
+            {
+              "formulae": [
+                {
+                  "name": "php",
+                  "installed_versions": [
+                    "8.0.12"
+                  ],
+                  "current_version": "8.0.13",
+                  "pinned": false,
+                  "pinned_version": null
+                }
+              ],
+              "casks": [
+                {
+                  "name": "powershell",
+                  "installed_versions": [
+                    "7.1.0"
+                  ],
+                  "current_version": "7.2.0",
+                  "pinned": false,
+                  "pinned_version": null
+                }
+              ]
+            }
+        "#;
+        let outdated = Outdated::new(data).unwrap();
+        assert_eq!(
+            outdated.to_csv().unwrap(),
+            format!("php,8.0.12,->,8.0.{}\npowershell,7.1.0,->,7.{}\n", "13".green(), "2.0".blue())
+        );
+    }
+
+    #[test]
+    fn format_returns_tabular_formulae() {
+        use colored::Colorize;
+
+        let data = r#"
+            {
+              "formulae": [
+                {
+                  "name": "php",
+                  "installed_versions": [
+                    "8.0.12"
+                  ],
+                  "current_version": "8.0.13",
+                  "pinned": false,
+                  "pinned_version": null
+                }
+              ],
+              "casks": [
+                {
+                  "name": "powershell",
+                  "installed_versions": [
+                    "7.1.0"
+                  ],
+                  "current_version": "7.2.0",
+                  "pinned": false,
+                  "pinned_version": null
+                }
+              ]
+            }
+        "#;
+        let outdated = Outdated::new(data).unwrap();
+        assert_eq!(
+            outdated.format().unwrap(),
+            format!(
+                "{}\n{}\n",
+                format!("php           8.0.12    ->    8.0.{}    ", "13".green()),
+                format!("powershell    7.1.0     ->    7.{  }    ", "2.0".blue())
+            )
+        );
     }
 }
