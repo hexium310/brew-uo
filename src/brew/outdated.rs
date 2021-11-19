@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::version::*;
+use crate::brew::version::*;
 use prettytable::{format, Table};
 use serde::Deserialize;
 
@@ -18,7 +18,7 @@ pub struct Formula {
 
 impl Outdated {
     pub(crate) fn new(data: &str) -> serde_json::Result<Self> {
-        let outdated: Outdated = serde_json::from_str(data)?;
+        let outdated = serde_json::from_str::<Outdated>(data)?;
         Ok(outdated)
     }
 
@@ -33,7 +33,7 @@ impl Outdated {
     fn to_csv(&self) -> Result<String, Error> {
         let mut writer = csv::Writer::from_writer(vec![]);
         for Formula { ref name, ref installed_versions, ref current_version } in [&self.formulae, &self.casks].into_iter().flatten()  {
-            let current_version = Version::new(installed_versions, current_version).colorize();
+            let current_version = VersionComparison::new(installed_versions, current_version).colorize();
             writer.serialize((name, installed_versions, "->", current_version))?;
         }
         writer.flush().unwrap();

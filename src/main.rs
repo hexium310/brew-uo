@@ -3,7 +3,6 @@
 mod brew;
 mod error;
 mod range;
-mod version;
 
 use crate::brew::*;
 use crate::error::Error;

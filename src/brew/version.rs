@@ -4,33 +4,30 @@ use std::ops::Bound::*;
 use colored::{Color, Colorize};
 use itertools::EitherOrBoth::Both;
 use itertools::Itertools;
-use version_compare::{CompOp, VersionCompare, VersionPart};
+use version_compare::{Cmp, Part};
 
 #[derive(Clone, Debug)]
-pub struct Version {
-    current_versions: Vec<String>,
-    latest_version: String,
+pub struct VersionComparison {
+    latest_installed_version: String,
+    current_version: String,
     delimiters: Vec<String>,
 }
 
-impl Version {
-    pub fn new<I, T>(current_versions: I, latest_version: &str) -> Version
-    where
-        I: IntoIterator<Item = T>,
-        T: AsRef<str>,
-    {
-        let delimiters = Self::generate_delimiters(latest_version);
+impl VersionComparison {
+    pub fn new(installed_versions: impl IntoIterator<Item = impl AsRef<str>>, current_version: &str) -> VersionComparison {
+        let delimiters = VersionComparison::get_delimiters(current_version);
+        let latest_installed_version = VersionComparison::get_latest_installed_version(installed_versions);
 
-        Version {
-            current_versions: current_versions.into_iter().map(|v| v.as_ref().to_owned()).collect(),
-            latest_version: latest_version.to_owned(),
+        VersionComparison {
+            latest_installed_version,
+            current_version: current_version.to_owned(),
             delimiters,
         }
     }
 
     pub fn colorize(&self) -> String {
-        version_compare::Version::from(&self.latest_version).map_or_else(
-            || self.latest_version.clone(),
+        version_compare::Version::from(&self.current_version).map_or_else(
+            || self.current_version.clone(),
             |latest_version| {
                 let latest_version_parts = latest_version.parts();
                 let different_part_position = self.find_different_part_position(latest_version_parts);
@@ -69,7 +66,14 @@ impl Version {
         )
     }
 
-    fn generate_delimiters(version_str: &str) -> Vec<String> {
+    fn get_latest_installed_version(latest_versions: impl IntoIterator<Item = impl AsRef<str>>) -> String {
+        let latest_versions = latest_versions.into_iter().map(|v| v.as_ref().to_owned()).collect::<Vec<String>>();
+        let latest_version = latest_versions.last().unwrap();
+
+        version_compare::Version::from(latest_version).unwrap().to_string()
+    }
+
+    fn get_delimiters(version_str: &str) -> Vec<String> {
         let delimiter_chars = ['.', '_', '-'];
 
         version_str
@@ -82,15 +86,16 @@ impl Version {
             .collect::<Vec<_>>()
     }
 
-    fn find_different_part_position(&self, latest_version_parts: &[VersionPart]) -> Option<usize> {
-        version_compare::Version::from(self.current_versions.last().unwrap_or(&"".to_owned())).and_then(
+    fn find_different_part_position(&self, latest_version_parts: &[Part]) -> Option<usize> {
+        version_compare::Version::from(&self.latest_installed_version).and_then(
             |newest_current_version| {
+                println!("{:?}", newest_current_version);
                 latest_version_parts
                     .iter()
                     .zip_longest(newest_current_version.parts().iter())
                     .position(|v| match v {
                         Both(left, right) => {
-                            VersionCompare::compare_to(&left.to_string(), &right.to_string(), &CompOp::Ne)
+                            version_compare::compare_to(&left.to_string(), &right.to_string(), Cmp::Ne)
                                 .unwrap_or_else(|_| left.to_string() != right.to_string())
                         },
                         _ => true,
@@ -101,7 +106,7 @@ impl Version {
 
     fn build_version<R>(
         &self,
-        version_parts: &[VersionPart],
+        version_parts: &[Part],
         version_range: R,
         delimiter_range: R,
     ) -> Result<String, Error>
@@ -136,14 +141,14 @@ impl Version {
 mod tests {
     use super::*;
 
-    fn before<'a>() -> (Version, Vec<version_compare::version_part::VersionPart<'a>>) {
+    fn before<'a>() -> (VersionComparison, Vec<Part<'a>>) {
         let latest_version = "1.0.0_1";
-        let version = Version::new(&[""], latest_version);
-        let mut parts: Vec<VersionPart> = vec![];
+        let version = VersionComparison::new(&[""], latest_version);
+        let mut parts: Vec<Part> = vec![];
         for part in version_compare::Version::from(latest_version).unwrap().parts() {
             parts.push(match part {
-                VersionPart::Number(v) => VersionPart::Number(*v),
-                VersionPart::Text(v) => VersionPart::Text(v),
+                Part::Number(v) => Part::Number(*v),
+                Part::Text(v) => Part::Text(v),
             })
         }
 
@@ -152,27 +157,28 @@ mod tests {
 
     #[test]
     fn generate_delimiters_should_return_delimiters_list() {
-        assert_eq!(Version::generate_delimiters("1.2_3-4"), [".".to_owned(), "_".to_owned(), "-".to_owned()]);
+        assert_eq!(VersionComparison::get_delimiters("1.2_3-4"), [".".to_owned(), "_".to_owned(), "-".to_owned()]);
     }
 
     #[test]
     fn find_different_part_position_should_return_position() {
         let latest_version = "1.0";
-        let version = Version::new(&["2.0"], latest_version);
+        let version = VersionComparison::new(&["2.0"], latest_version);
         let v = version_compare::Version::from(latest_version).unwrap();
         let latest_version_parts = v.parts();
 
         assert_eq!(version.find_different_part_position(latest_version_parts), Some(0));
 
         let latest_version = "1.0b";
-        let version = Version::new(&["1.0a"], latest_version);
+        let version = VersionComparison::new(&["1.0a"], latest_version);
         let v = version_compare::Version::from(latest_version).unwrap();
         let latest_version_parts = v.parts();
 
-        assert_eq!(version.find_different_part_position(latest_version_parts), Some(1));
+        println!("{:?}", version.find_different_part_position(latest_version_parts));
+        assert_eq!(version.find_different_part_position(latest_version_parts), Some(2));
 
         let latest_version = "1.0";
-        let version = Version::new(&["1.0"], latest_version);
+        let version = VersionComparison::new(&["1.0"], latest_version);
         let v = version_compare::Version::from(latest_version).unwrap();
         let latest_version_parts = v.parts();
 
