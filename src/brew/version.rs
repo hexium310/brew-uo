@@ -89,7 +89,6 @@ impl VersionComparison {
     fn find_different_part_position(&self, latest_version_parts: &[Part]) -> Option<usize> {
         version_compare::Version::from(&self.latest_installed_version).and_then(
             |newest_current_version| {
-                println!("{:?}", newest_current_version);
                 latest_version_parts
                     .iter()
                     .zip_longest(newest_current_version.parts().iter())
@@ -174,7 +173,6 @@ mod tests {
         let v = version_compare::Version::from(latest_version).unwrap();
         let latest_version_parts = v.parts();
 
-        println!("{:?}", version.find_different_part_position(latest_version_parts));
         assert_eq!(version.find_different_part_position(latest_version_parts), Some(2));
 
         let latest_version = "1.0";
