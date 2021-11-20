@@ -74,7 +74,7 @@ impl VersionComparison {
     }
 
     fn get_delimiters(version_str: &str) -> Vec<String> {
-        let delimiter_chars = ['.', '_', '-'];
+        let delimiter_chars = ['.', '_', '-', '+'];
 
         version_str
             .matches(|version_char| {
@@ -201,13 +201,6 @@ mod tests {
     }
 
     #[test]
-    fn colorize_should_return_version_colored_red_when_it_starting_alphabet() {
-        let version = VersionComparison::new(&["r2917_1"], "r2999");
-
-        assert_eq!(version.colorize(), "r2999".red().to_string());
-    }
-
-    #[test]
     #[should_panic(expected = "same")]
     fn build_version_should_panic_when_passed_two_ranges_start_is_not_same() {
         let before = before();
@@ -225,5 +218,41 @@ mod tests {
         let parts = &before.1;
 
         let _ = version.build_version(parts, ..1, ..1);
+    }
+
+    #[test]
+    fn colorize_should_return_version_colored() {
+        assert_eq!(
+            VersionComparison::new(&["1.0.0"], "2.0.0").colorize(),
+            format!("{}{}", "", "2.0.0".red())
+        );
+        assert_eq!(
+            VersionComparison::new(&["1.0.0"], "1.1.0").colorize(),
+            format!("{}{}", "1.", "1.0".blue())
+        );
+        assert_eq!(
+            VersionComparison::new(&["1.0.0"], "1.0.1").colorize(),
+            format!("{}{}", "1.0.", "1".green())
+        );
+        assert_eq!(
+            VersionComparison::new(&["1.0.0_0"], "1.0.0_1").colorize(),
+            format!("{}{}", "1.0.0_", "1".green())
+        );
+        assert_eq!(
+            VersionComparison::new(&["1.0.0-0"], "1.0.0-1").colorize(),
+            format!("{}{}", "1.0.0-", "1".green())
+        );
+        assert_eq!(
+            VersionComparison::new(&["2.4+20150115"], "2.4+20151223_1").colorize(),
+            format!("{}{}", "2.4+", "20151223_1".green())
+        );
+        assert_eq!(
+            VersionComparison::new(&["3.1"], "3.2a").colorize(),
+            format!("{}{}", "3.", "2a".blue())
+        );
+        assert_eq!(
+            VersionComparison::new(&["r2917_1"], "r2999").colorize(),
+            format!("{}{}", "", "r2999".red())
+        );
     }
 }
