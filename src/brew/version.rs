@@ -28,26 +28,26 @@ impl VersionComparison {
     pub fn colorize(&self) -> String {
         version_compare::Version::from(&self.current_version).map_or_else(
             || self.current_version.red().to_string(),
-            |latest_version| {
-                let latest_version_parts = latest_version.parts();
-                let different_part_position = self.find_different_part_position(latest_version_parts);
+            |current_version| {
+                let current_version_parts = current_version.parts();
+                let different_part_position = self.find_different_part_position(current_version_parts);
 
                 different_part_position.map_or_else(
-                    || latest_version.to_string(),
+                    || current_version.to_string(),
                     |position| {
-                        let (latest_version_parts_without_change, between_delimiter) =
+                        let (current_version_parts_without_change, between_delimiter) =
                             position.checked_sub(1).map_or_else(
                                 || ("".to_owned(), "".to_owned()),
                                 |delimiters_position| {
                                     (
-                                        self.build_version(latest_version_parts, ..position, ..delimiters_position)
+                                        self.build_version(current_version_parts, ..position, ..delimiters_position)
                                             .unwrap(),
                                         self.delimiters[delimiters_position].to_owned(),
                                     )
                                 },
                             );
-                        let latest_version_parts_with_change = self
-                            .build_version(latest_version_parts, position.., position..)
+                        let current_version_parts_with_change = self
+                            .build_version(current_version_parts, position.., position..)
                             .unwrap()
                             .color(match position {
                                 0 => Color::Red,
@@ -58,7 +58,7 @@ impl VersionComparison {
 
                         format!(
                             "{}{}{}",
-                            latest_version_parts_without_change, between_delimiter, latest_version_parts_with_change,
+                            current_version_parts_without_change, between_delimiter, current_version_parts_with_change,
                         )
                     },
                 )
@@ -86,10 +86,10 @@ impl VersionComparison {
             .collect::<Vec<_>>()
     }
 
-    fn find_different_part_position(&self, latest_version_parts: &[Part]) -> Option<usize> {
+    fn find_different_part_position(&self, current_version_parts: &[Part]) -> Option<usize> {
         version_compare::Version::from(&self.latest_installed_version).and_then(
             |newest_current_version| {
-                latest_version_parts
+                current_version_parts
                     .iter()
                     .zip_longest(newest_current_version.parts().iter())
                     .position(|v| match v {
@@ -141,10 +141,10 @@ mod tests {
     use super::*;
 
     fn before<'a>() -> (VersionComparison, Vec<Part<'a>>) {
-        let latest_version = "1.0.0_1";
-        let version = VersionComparison::new(&[""], latest_version);
+        let current_version = "1.0.0_1";
+        let version = VersionComparison::new(&[""], current_version);
         let mut parts: Vec<Part> = vec![];
-        for part in version_compare::Version::from(latest_version).unwrap().parts() {
+        for part in version_compare::Version::from(current_version).unwrap().parts() {
             parts.push(match part {
                 Part::Number(v) => Part::Number(*v),
                 Part::Text(v) => Part::Text(v),
@@ -161,26 +161,26 @@ mod tests {
 
     #[test]
     fn find_different_part_position_should_return_position() {
-        let latest_version = "1.0";
-        let version = VersionComparison::new(&["2.0"], latest_version);
-        let v = version_compare::Version::from(latest_version).unwrap();
-        let latest_version_parts = v.parts();
+        let current_version = "1.0";
+        let version = VersionComparison::new(&["2.0"], current_version);
+        let v = version_compare::Version::from(current_version).unwrap();
+        let current_version_parts = v.parts();
 
-        assert_eq!(version.find_different_part_position(latest_version_parts), Some(0));
+        assert_eq!(version.find_different_part_position(current_version_parts), Some(0));
 
-        let latest_version = "1.0b";
-        let version = VersionComparison::new(&["1.0a"], latest_version);
-        let v = version_compare::Version::from(latest_version).unwrap();
-        let latest_version_parts = v.parts();
+        let current_version = "1.0b";
+        let version = VersionComparison::new(&["1.0a"], current_version);
+        let v = version_compare::Version::from(current_version).unwrap();
+        let current_version_parts = v.parts();
 
-        assert_eq!(version.find_different_part_position(latest_version_parts), Some(2));
+        assert_eq!(version.find_different_part_position(current_version_parts), Some(2));
 
-        let latest_version = "1.0";
-        let version = VersionComparison::new(&["1.0"], latest_version);
-        let v = version_compare::Version::from(latest_version).unwrap();
-        let latest_version_parts = v.parts();
+        let current_version = "1.0";
+        let version = VersionComparison::new(&["1.0"], current_version);
+        let v = version_compare::Version::from(current_version).unwrap();
+        let current_version_parts = v.parts();
 
-        assert_eq!(version.find_different_part_position(latest_version_parts), None);
+        assert_eq!(version.find_different_part_position(current_version_parts), None);
     }
 
     #[test]
