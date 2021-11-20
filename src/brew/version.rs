@@ -70,7 +70,7 @@ impl VersionComparison {
         let latest_versions = latest_versions.into_iter().map(|v| v.as_ref().to_owned()).collect::<Vec<String>>();
         let latest_version = latest_versions.last().unwrap();
 
-        version_compare::Version::from(latest_version).unwrap().to_string()
+        latest_version.to_string()
     }
 
     fn get_delimiters(version_str: &str) -> Vec<String> {
