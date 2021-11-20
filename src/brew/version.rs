@@ -27,7 +27,7 @@ impl VersionComparison {
 
     pub fn colorize(&self) -> String {
         version_compare::Version::from(&self.current_version).map_or_else(
-            || self.current_version.clone(),
+            || self.current_version.red().to_string(),
             |latest_version| {
                 let latest_version_parts = latest_version.parts();
                 let different_part_position = self.find_different_part_position(latest_version_parts);
@@ -198,6 +198,13 @@ mod tests {
         assert_eq!(version.build_version(parts, 1.., 1..).ok(), Some("0.0_1".to_owned()));
         assert_eq!(version.build_version(parts, 2.., 2..).ok(), Some("0_1".to_owned()));
         assert_eq!(version.build_version(parts, 3.., 3..).ok(), Some("1".to_owned()));
+    }
+
+    #[test]
+    fn colorize_should_return_version_colored_red_when_it_starting_alphabet() {
+        let version = VersionComparison::new(&["r2917_1"], "r2999");
+
+        assert_eq!(version.colorize(), "r2999".red().to_string());
     }
 
     #[test]
