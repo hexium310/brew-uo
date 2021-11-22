@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  - push
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout hexium310/brew-uo
+        uses: actions/checkout@v2
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Set up a Rust toolchain
+        uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: nightly
+      - name: Run tests
+        run: cargo test --verbose
+      - name: Check brew-uo
+        run: cargo check --release --verbose

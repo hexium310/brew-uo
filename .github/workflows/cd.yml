@@ -1,6 +1,9 @@
-name: Rust
+name: CD
 
-on: [push, pull_request]
+on:
+  push:
+    tags:
+      - '*'
 
 jobs:
   build:
@@ -27,21 +30,18 @@ jobs:
       - name: Build
         run: cargo build --release --verbose
       - name: Pack
-        if: startsWith(github.ref, 'refs/tags/')
         run: |
           cd target/release
           tar zcvf macos.tar.gz brew-uo
           tar tf macos.tar.gz
       - name: Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: target/release/macos.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-tap:
-    if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: macos-latest
 
