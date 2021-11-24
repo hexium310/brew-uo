@@ -111,13 +111,13 @@ impl VersionComparison {
     {
         match (version_range.start_bound(), delimiter_range.start_bound()) {
             (Included(&v), Included(&d)) | (Excluded(&v), Excluded(&d)) if v != d => {
-                panic!("{}", Error::VersionRangeStartError)
+                panic!("{}", Error::VersionRangeStart)
             },
             _ => (),
         };
         match (version_range.end_bound(), delimiter_range.end_bound()) {
             (Included(&v), Included(&d)) | (Excluded(&v), Excluded(&d)) if v <= d => {
-                panic!("{}", Error::VersionRangeEndError)
+                panic!("{}", Error::VersionRangeEnd)
             },
             _ => (),
         };
@@ -140,10 +140,10 @@ impl VersionComparison {
 mod tests {
     use super::*;
 
-    fn before<'a>(
+    fn before(
         installed_versions: impl IntoIterator<Item = impl AsRef<str>>,
-        current_version: &'a str,
-    ) -> (VersionComparison, Vec<Part<'a>>) {
+        current_version: &str,
+    ) -> (VersionComparison, Vec<Part>) {
         let version = VersionComparison::new(installed_versions, current_version);
         let parts = Version::from(current_version).unwrap();
         let parts = parts.parts();
