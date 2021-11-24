@@ -140,18 +140,15 @@ impl VersionComparison {
 mod tests {
     use super::*;
 
-    fn before<'a>() -> (VersionComparison, Vec<Part<'a>>) {
-        let current_version = "1.0.0_1";
-        let version = VersionComparison::new(&[""], current_version);
-        let mut parts: Vec<Part> = vec![];
-        for part in Version::from(current_version).unwrap().parts() {
-            parts.push(match part {
-                Part::Number(v) => Part::Number(*v),
-                Part::Text(v) => Part::Text(v),
-            })
-        }
+    fn before<'a>(
+        installed_versions: impl IntoIterator<Item = impl AsRef<str>>,
+        current_version: &'a str,
+    ) -> (VersionComparison, Vec<Part<'a>>) {
+        let version = VersionComparison::new(installed_versions, current_version);
+        let parts = Version::from(current_version).unwrap();
+        let parts = parts.parts();
 
-        (version, parts)
+        (version, parts.to_owned())
     }
 
     #[test]
@@ -164,33 +161,19 @@ mod tests {
 
     #[test]
     fn find_different_part_position_should_return_position() {
-        let current_version = "1.0";
-        let version = VersionComparison::new(&["2.0"], current_version);
-        let v = Version::from(current_version).unwrap();
-        let current_version_parts = v.parts();
+        let (version, ref parts) = before(vec!["2.0"], "1.0");
+        assert_eq!(version.get_diff_position(parts), Some(0));
 
-        assert_eq!(version.get_diff_position(current_version_parts), Some(0));
+        let (version, ref parts) = before(vec!["1.0a"], "1.0b");
+        assert_eq!(version.get_diff_position(parts), Some(2));
 
-        let current_version = "1.0b";
-        let version = VersionComparison::new(&["1.0a"], current_version);
-        let v = Version::from(current_version).unwrap();
-        let current_version_parts = v.parts();
-
-        assert_eq!(version.get_diff_position(current_version_parts), Some(2));
-
-        let current_version = "1.0";
-        let version = VersionComparison::new(&["1.0"], current_version);
-        let v = Version::from(current_version).unwrap();
-        let current_version_parts = v.parts();
-
-        assert_eq!(version.get_diff_position(current_version_parts), None);
+        let (version, ref parts) = before(vec!["1.0"], "1.0");
+        assert_eq!(version.get_diff_position(parts), None);
     }
 
     #[test]
     fn build_version_should_return_string() {
-        let before = before();
-        let version = before.0;
-        let parts = &before.1;
+        let (version, ref parts) = before(vec![""], "1.0.0_1");
 
         assert_eq!(version.build_version(parts, ..1, ..0).ok(), Some("1".to_owned()));
         assert_eq!(version.build_version(parts, ..2, ..1).ok(), Some("1.0".to_owned()));
@@ -206,9 +189,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "same")]
     fn build_version_should_panic_when_passed_two_ranges_start_is_not_same() {
-        let before = before();
-        let version = before.0;
-        let parts = &before.1;
+        let (version, ref parts) = before(vec![""], "1.0.0_1");
 
         let _ = version.build_version(parts, 0.., 1..);
     }
@@ -216,9 +197,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "greater than")]
     fn test_should_panic_build_version_first_range_end_not_greater_than_second_range_end() {
-        let before = before();
-        let version = before.0;
-        let parts = &before.1;
+        let (version, ref parts) = before(vec![""], "1.0.0_1");
 
         let _ = version.build_version(parts, ..1, ..1);
     }

@@ -54,7 +54,7 @@ mod tests {
     use crate::color::VERSION_COLOR;
 
     #[test]
-    fn new_returns_outdated_struct() {
+    fn new_should_returns_outdated_struct() {
         let data = r#"
             {
               "formulae": [
@@ -117,7 +117,7 @@ mod tests {
     }
 
     #[test]
-    fn to_csv_returns_csv_with_color() {
+    fn to_csv_should_returns_csv_with_color() {
         use colored::Colorize;
 
         let data = r#"
@@ -158,7 +158,7 @@ mod tests {
     }
 
     #[test]
-    fn format_returns_tabular_formulae() {
+    fn format_should_returns_tabular_formulae() {
         use colored::Colorize;
 
         let data = r#"
