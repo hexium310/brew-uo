@@ -11,9 +11,9 @@ use crate::range::*;
 
 #[derive(Clone, Debug)]
 pub struct VersionComparison {
-    latest_installed_version: String,
-    current_version: String,
-    delimiters: Vec<String>,
+    pub latest_installed_version: String,
+    pub current_version: String,
+    pub delimiters: Vec<String>,
 }
 
 impl VersionComparison {

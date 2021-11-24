@@ -39,8 +39,8 @@ impl Outdated {
             ref current_version,
         } in [&self.formulae, &self.casks].into_iter().flatten()
         {
-            let current_version = VersionComparison::new(installed_versions, current_version).colorize();
-            writer.serialize((name, installed_versions, "->", current_version))?;
+            let version = VersionComparison::new(installed_versions, current_version);
+            writer.serialize((name, &version.latest_installed_version, "->", &version.colorize()))?;
         }
         writer.flush().unwrap();
         let csv = String::from_utf8(writer.into_inner()?)?;
@@ -58,6 +58,16 @@ mod tests {
         let data = r#"
             {
               "formulae": [
+                {
+                  "name": "curl",
+                  "installed_versions": [
+                    "7.80.0",
+                    "7.80.0"
+                  ],
+                  "current_version": "7.80.0_1",
+                  "pinned": false,
+                  "pinned_version": null
+                },
                 {
                   "name": "php",
                   "installed_versions": [
@@ -84,11 +94,18 @@ mod tests {
         assert_eq!(
             Outdated::new(data).unwrap(),
             Outdated {
-                formulae: vec![Formula {
-                    name: "php".to_owned(),
-                    installed_versions: vec!["8.0.12".to_owned()],
-                    current_version: "8.0.13".to_owned(),
-                }],
+                formulae: vec![
+                    Formula {
+                        name: "curl".to_owned(),
+                        installed_versions: vec!["7.80.0".to_owned(), "7.80.0".to_owned()],
+                        current_version: "7.80.0_1".to_owned(),
+                    },
+                    Formula {
+                        name: "php".to_owned(),
+                        installed_versions: vec!["8.0.12".to_owned()],
+                        current_version: "8.0.13".to_owned(),
+                    },
+                ],
                 casks: vec![Formula {
                     name: "powershell".to_owned(),
                     installed_versions: vec!["7.1.0".to_owned()],
@@ -124,6 +141,16 @@ mod tests {
             {
               "formulae": [
                 {
+                  "name": "curl",
+                  "installed_versions": [
+                    "7.80.0",
+                    "7.80.0"
+                  ],
+                  "current_version": "7.80.0_1",
+                  "pinned": false,
+                  "pinned_version": null
+                },
+                {
                   "name": "php",
                   "installed_versions": [
                     "8.0.12"
@@ -150,7 +177,8 @@ mod tests {
         assert_eq!(
             outdated.to_csv().unwrap(),
             format!(
-                "php,8.0.12,->,8.0.{}\npowershell,7.1.0,->,7.{}\n",
+                "curl,7.80.0,->,7.80.0_{}\nphp,8.0.12,->,8.0.{}\npowershell,7.1.0,->,7.{}\n",
+                "1".color(VERSION_COLOR.other),
                 "13".color(VERSION_COLOR.other),
                 "2.0".color(VERSION_COLOR.minor)
             )
@@ -164,6 +192,16 @@ mod tests {
         let data = r#"
             {
               "formulae": [
+                {
+                  "name": "curl",
+                  "installed_versions": [
+                    "7.80.0",
+                    "7.80.0"
+                  ],
+                  "current_version": "7.80.0_1",
+                  "pinned": false,
+                  "pinned_version": null
+                },
                 {
                   "name": "php",
                   "installed_versions": [
@@ -191,13 +229,17 @@ mod tests {
         assert_eq!(
             outdated.format().unwrap(),
             format!(
-                "{}\n{}\n",
+                "{}\n{}\n{}\n",
                 format!(
-                    "php           8.0.12    ->    8.0.{}    ",
+                    "curl          7.80.0    ->    7.80.0_{}    ",
+                    "1".color(VERSION_COLOR.other)
+                ),
+                format!(
+                    "php           8.0.12    ->    8.0.{   }    ",
                     "13".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "powershell    7.1.0     ->    7.{  }    ",
+                    "powershell    7.1.0     ->    7.{     }    ",
                     "2.0".color(VERSION_COLOR.minor)
                 )
             )
