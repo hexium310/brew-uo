@@ -6,7 +6,7 @@ on:
       - '*'
 
 jobs:
-  build:
+  release:
     runs-on: macos-latest
 
     steps:
@@ -42,42 +42,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-tap:
-    needs: build
+    needs: release
     runs-on: macos-latest
 
     steps:
-      - name: Checkout hexium310/homebrew-brew-uo
-        uses: actions/checkout@v2
-        with:
-          repository: hexium310/homebrew-brew-uo
-          token: ${{ secrets.ACCESS_TOKEN }}
       - name: Update formula
         run: |
-          url=$(cat brew-uo.rb | awk -v version="${GITHUB_REF##*/}" '
-              function extract_value(input, key) {
-                  match(input, key)
-                  input = substr($0, RSTART + RLENGTH)
-                  gsub("\"", "", input)
-                  return input
-              }
-              /^ *REPOSITORY_URL/ {
-                  repository = extract_value($0, "REPOSITORY_URL = ")
-              }
-              /^ *url/ {
-                  url = extract_value($0, "url ")
-              }
-              END {
-                  gsub("#{REPOSITORY_URL}", repository, url)
-                  gsub("#{VERSION}", version, url)
-                  print url
-              }
-          ')
-          curl -fLO "https://github.com/hexium310/brew-uo/releases/download/${GITHUB_REF##*/}/macos.tar.gz"
-          hash=$(shasum -a 256 macos.tar.gz | awk '{ print $1 }')
-          sed -i '' -e 's/\(VERSION = \).*/\1"'"${GITHUB_REF##*/}"'"/' -e 's/\(sha256 \).*/\1"'"$hash"'"/' brew-uo.rb
-
-          git config user.email "hexium310@gmail.com"
-          git config user.name "Hexin"
-          git diff
-          git commit -am "Update version to ${GITHUB_REF##*/}"
-          git push origin master
+          brew tap hexium310/tap
+          brew bump-formula-pr --version="${GITHUB_REF##*/}" hexium310/tap/brew-uo
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}

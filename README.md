@@ -3,7 +3,7 @@ brew-uo is command to continuously execute `brew update` and `brew outdated`.
 
 # Install
 ```sh
-$ brew tap hexium310/brew-uo
+$ brew tap hexium310/tap
 $ brew install brew-uo
 ```
 
