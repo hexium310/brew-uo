@@ -1,13 +1,14 @@
 # brew-uo
-brew-uo is command to continuously execute `brew update` and `brew outdated`.
+`brew-uo` is a homebrew subcommand that runs `brew update` and `brew outdated` in succession and colorize
+the results of `brew outdated`.
 
-# Install
+## Installation
 ```sh
 $ brew tap hexium310/tap
 $ brew install brew-uo
 ```
 
-# Usage
+## Usage
 ```sh
 $ brew uo
 ```
