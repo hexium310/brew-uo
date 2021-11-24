@@ -19,7 +19,10 @@ impl fmt::Display for Error {
             Error::Command(ref err) => write!(fmt, "{}", err),
             Error::FromUtf8Error(ref err) => write!(fmt, "{}", err),
             Error::IndexOutOfRange => write!(fmt, "The index out of range."),
-            Error::VersionRangeEndError => write!(fmt, "The end of range have to be greater than the end of another range."),
+            Error::VersionRangeEndError => write!(
+                fmt,
+                "The end of range have to be greater than the end of another range."
+            ),
             Error::VersionRangeStartError => write!(fmt, "The start of two ranges have to be the same."),
         }
     }

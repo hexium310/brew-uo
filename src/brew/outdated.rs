@@ -1,7 +1,8 @@
-use crate::error::Error;
-use crate::brew::version::*;
 use prettytable::{format, Table};
 use serde::Deserialize;
+
+use crate::brew::version::*;
+use crate::error::Error;
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Outdated {
@@ -32,7 +33,12 @@ impl Outdated {
 
     fn to_csv(&self) -> Result<String, Error> {
         let mut writer = csv::Writer::from_writer(vec![]);
-        for Formula { ref name, ref installed_versions, ref current_version } in [&self.formulae, &self.casks].into_iter().flatten()  {
+        for Formula {
+            ref name,
+            ref installed_versions,
+            ref current_version,
+        } in [&self.formulae, &self.casks].into_iter().flatten()
+        {
             let current_version = VersionComparison::new(installed_versions, current_version).colorize();
             writer.serialize((name, installed_versions, "->", current_version))?;
         }
@@ -45,6 +51,7 @@ impl Outdated {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::color::VERSION_COLOR;
 
     #[test]
     fn new_returns_outdated_struct() {
@@ -74,22 +81,21 @@ mod tests {
               ]
             }
         "#;
-        assert_eq!(Outdated::new(data).unwrap(), Outdated {
-            formulae: vec![
-                Formula {
+        assert_eq!(
+            Outdated::new(data).unwrap(),
+            Outdated {
+                formulae: vec![Formula {
                     name: "php".to_owned(),
                     installed_versions: vec!["8.0.12".to_owned()],
                     current_version: "8.0.13".to_owned(),
-                },
-            ],
-            casks: vec![
-                Formula {
+                }],
+                casks: vec![Formula {
                     name: "powershell".to_owned(),
                     installed_versions: vec!["7.1.0".to_owned()],
                     current_version: "7.2.0".to_owned(),
-                },
-            ],
-        });
+                }],
+            }
+        );
 
         let data = r#"
             {
@@ -101,10 +107,13 @@ mod tests {
               ]
             }
         "#;
-        assert_eq!(Outdated::new(data).unwrap(), Outdated {
-            formulae: vec![],
-            casks: vec![],
-        });
+        assert_eq!(
+            Outdated::new(data).unwrap(),
+            Outdated {
+                formulae: vec![],
+                casks: vec![],
+            }
+        );
     }
 
     #[test]
@@ -140,7 +149,11 @@ mod tests {
         let outdated = Outdated::new(data).unwrap();
         assert_eq!(
             outdated.to_csv().unwrap(),
-            format!("php,8.0.12,->,8.0.{}\npowershell,7.1.0,->,7.{}\n", "13".green(), "2.0".blue())
+            format!(
+                "php,8.0.12,->,8.0.{}\npowershell,7.1.0,->,7.{}\n",
+                "13".color(VERSION_COLOR.other),
+                "2.0".color(VERSION_COLOR.minor)
+            )
         );
     }
 
@@ -179,8 +192,14 @@ mod tests {
             outdated.format().unwrap(),
             format!(
                 "{}\n{}\n",
-                format!("php           8.0.12    ->    8.0.{}    ", "13".green()),
-                format!("powershell    7.1.0     ->    7.{  }    ", "2.0".blue())
+                format!(
+                    "php           8.0.12    ->    8.0.{}    ",
+                    "13".color(VERSION_COLOR.other)
+                ),
+                format!(
+                    "powershell    7.1.0     ->    7.{  }    ",
+                    "2.0".color(VERSION_COLOR.minor)
+                )
             )
         );
     }

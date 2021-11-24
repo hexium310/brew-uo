@@ -1,13 +1,16 @@
 #![feature(try_blocks)]
 
 mod brew;
+mod color;
 mod error;
 mod range;
 
+use std::process::Command;
+
+use colored::Colorize;
+
 use crate::brew::*;
 use crate::error::Error;
-use colored::Colorize;
-use std::process::Command;
 
 fn main() {
     if let Err(err) = run_update() {
