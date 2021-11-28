@@ -79,7 +79,7 @@ impl VersionComparison {
     }
 
     fn get_delimiters(version_str: &str) -> Vec<String> {
-        let delimiter_chars = ['.', '_', '-', '+'];
+        let delimiter_chars = ['.', '_', '-', '+', ','];
 
         version_str
             .matches(|version_char| {
@@ -235,6 +235,10 @@ mod tests {
         assert_eq!(
             VersionComparison::new(&["r2917_1"], "r2999").colorize(),
             format!("{}{}", "", "r2999".color(VERSION_COLOR.major))
+        );
+        assert_eq!(
+            VersionComparison::new(&["3.4.1,3041"], "3.4.2,3043").colorize(),
+            format!("{}{}", "3.4.", "2,3043".color(VERSION_COLOR.other))
         );
     }
 }

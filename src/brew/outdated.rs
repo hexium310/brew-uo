@@ -87,6 +87,15 @@ mod tests {
                   "current_version": "7.2.0",
                   "pinned": false,
                   "pinned_version": null
+                },
+                {
+                  "name": "sequel-ace",
+                  "installed_versions": [
+                    "3.4.1,3041"
+                  ],
+                  "current_version": "3.4.2,3043",
+                  "pinned": false,
+                  "pinned_version": null
                 }
               ]
             }
@@ -106,11 +115,18 @@ mod tests {
                         current_version: "8.0.13".to_owned(),
                     },
                 ],
-                casks: vec![Formula {
-                    name: "powershell".to_owned(),
-                    installed_versions: vec!["7.1.0".to_owned()],
-                    current_version: "7.2.0".to_owned(),
-                }],
+                casks: vec![
+                    Formula {
+                        name: "powershell".to_owned(),
+                        installed_versions: vec!["7.1.0".to_owned()],
+                        current_version: "7.2.0".to_owned(),
+                    },
+                    Formula {
+                        name: "sequel-ace".to_owned(),
+                        installed_versions: vec!["3.4.1,3041".to_owned()],
+                        current_version: "3.4.2,3043".to_owned(),
+                    }
+                ],
             }
         );
 
@@ -169,6 +185,15 @@ mod tests {
                   "current_version": "7.2.0",
                   "pinned": false,
                   "pinned_version": null
+                },
+                {
+                  "name": "sequel-ace",
+                  "installed_versions": [
+                    "3.4.1,3041"
+                  ],
+                  "current_version": "3.4.2,3043",
+                  "pinned": false,
+                  "pinned_version": null
                 }
               ]
             }
@@ -177,10 +202,11 @@ mod tests {
         assert_eq!(
             outdated.to_csv().unwrap(),
             format!(
-                "curl,7.80.0,->,7.80.0_{}\nphp,8.0.12,->,8.0.{}\npowershell,7.1.0,->,7.{}\n",
+                "curl,7.80.0,->,7.80.0_{}\nphp,8.0.12,->,8.0.{}\npowershell,7.1.0,->,7.{}\nsequel-ace,\"3.4.1,3041\",->,\"3.4.{}\"\n",
                 "1".color(VERSION_COLOR.other),
                 "13".color(VERSION_COLOR.other),
-                "2.0".color(VERSION_COLOR.minor)
+                "2.0".color(VERSION_COLOR.minor),
+                "2,3043".color(VERSION_COLOR.other)
             )
         );
     }
@@ -221,6 +247,15 @@ mod tests {
                   "current_version": "7.2.0",
                   "pinned": false,
                   "pinned_version": null
+                },
+                {
+                  "name": "sequel-ace",
+                  "installed_versions": [
+                    "3.4.1,3041"
+                  ],
+                  "current_version": "3.4.2,3043",
+                  "pinned": false,
+                  "pinned_version": null
                 }
               ]
             }
@@ -229,18 +264,22 @@ mod tests {
         assert_eq!(
             outdated.format().unwrap(),
             format!(
-                "{}\n{}\n{}\n",
+                "{}\n{}\n{}\n{}\n",
                 format!(
-                    "curl          7.80.0    ->    7.80.0_{}    ",
+                    "curl          7.80.0        ->    7.80.0_{ }    ",
                     "1".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "php           8.0.12    ->    8.0.{   }    ",
+                    "php           8.0.12        ->    8.0.{    }    ",
                     "13".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "powershell    7.1.0     ->    7.{     }    ",
+                    "powershell    7.1.0         ->    7.{      }    ",
                     "2.0".color(VERSION_COLOR.minor)
+                ),
+                format!(
+                    "sequel-ace    3.4.1,3041    ->    3.4.{     }    ",
+                    "2,3043".color(VERSION_COLOR.other)
                 )
             )
         );
