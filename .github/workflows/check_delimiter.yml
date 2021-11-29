@@ -1,6 +1,7 @@
 name: Check delimiter
 
 on:
+  workflow_dispatch: null
   schedule:
     - cron: '0 0 * * *'
 
