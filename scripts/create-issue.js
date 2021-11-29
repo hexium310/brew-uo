@@ -9,7 +9,7 @@ const buildBody = (content) => {
   ].join('\n');
 };
 
-const createIssue = (content) => {
+const createIssue = async (content) => {
   const issue = await github.rest.issues.create({
     owner,
     repo,
@@ -21,7 +21,7 @@ const createIssue = (content) => {
   console.log(`Create ${ issue.html_url }`);
 };
 
-const comment = (issue, content) => {
+const comment = async (issue, content) => {
   const issueNumber = issue.number;
   const comments = await github.rest.issues.listComments({
     owner,
@@ -59,11 +59,11 @@ module.exports = async ({ github, context, core }) => {
   });
 
   if (issues.length === 0) {
-    createIssue(VERSIONS);
+    await createIssue(VERSIONS);
     return;
   }
 
 
   const latestIssue = issues[issues.lenght - 1];
-  comment(latestIssue, VERSIONS);
+  await comment(latestIssue, VERSIONS);
 }
