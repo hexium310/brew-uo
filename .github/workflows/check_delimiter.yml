@@ -24,7 +24,7 @@ jobs:
                   to_entries
                     | map(select(.value.version | test("[^[:alnum:]" + ($delimiters | join("") | sub("-"; "\\-")) + "]")))
                     | from_entries
-                )
+                ) | add
               ' >> $GITHUB_ENV
             echo 'EOF' >> $GITHUB_ENV
           fi

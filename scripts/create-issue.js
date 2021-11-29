@@ -9,8 +9,10 @@ const buildBody = (content) => {
   ].join('\n');
 };
 
-const createIssue = async (content) => {
-  const issue = await github.rest.issues.create({
+const createIssue = async (github, context, content) => {
+  const { owner, repo } = context.repo;
+
+  const { data: issue } = await github.rest.issues.create({
     owner,
     repo,
     title: 'Unsupported version delimiters',
@@ -21,23 +23,31 @@ const createIssue = async (content) => {
   console.log(`Create ${ issue.html_url }`);
 };
 
-const comment = async (issue, content) => {
+const comment = async (github, context, issue, content) => {
+  const { owner, repo } = context.repo;
+
   const issueNumber = issue.number;
-  const comments = await github.rest.issues.listComments({
+  const { data: comments } = await github.rest.issues.listComments({
     owner,
     repo,
     issue_number: issueNumber,
   });
-  const bodies = [issue.body, comments.map(({ body }) => body)];
-  const mentionedVersions = bodies.map((body) => {
+  const bodies = [issue.body, comments.map(({ body }) => body)].flat();
+
+  const mentionedVersions = Object.assign({}, ...bodies.flatMap((body) => {
     const tokens = marked.lexer(body);
     const codes = tokens.filter(({ type, lang }) => type === 'code' && lang === 'json');
     return codes.map(({ text }) => JSON.parse(text));
-  }).flat();
+  }));
   const versions = JSON.parse(content);
+
   const diffKeys = Object.keys(diff(mentionedVersions, versions));
-  const diffVersions = versions.filter((obj) => diffKeys.includes(Object.keys(obj)[0]));
-  const comment = await github.rest.issues.createComment({
+  if (diffKeys.length === 0) {
+    return;
+  }
+
+  const diffVersions = Object.fromEntries(Object.entries(versions).filter(([key, _]) => diffKeys.includes(key)));
+  const { data: comment } = await github.rest.issues.createComment({
     owner,
     repo,
     issue_number: issueNumber,
@@ -51,7 +61,7 @@ module.exports = async ({ github, context, core }) => {
   const { VERSIONS } = process.env;
   const { owner, repo } = context.repo;
 
-  const issues = await github.rest.issues.listForRepo({
+  const { data: issues } = await github.rest.issues.listForRepo({
     owner,
     repo,
     state: 'open',
@@ -59,11 +69,10 @@ module.exports = async ({ github, context, core }) => {
   });
 
   if (issues.length === 0) {
-    await createIssue(VERSIONS);
+    await createIssue(github, context, VERSIONS);
     return;
   }
 
-
-  const latestIssue = issues[issues.lenght - 1];
-  await comment(latestIssue, VERSIONS);
+  const latestIssue = issues[issues.length - 1];
+  await comment(github, context, latestIssue, VERSIONS);
 }
