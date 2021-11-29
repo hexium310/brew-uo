@@ -1,0 +1,37 @@
+name: Check delimiter
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout hexium310/brew-uo
+        uses: actions/checkout@v2
+      - name: Check unsupported version delimiter
+        id: check_version
+        run: |
+          file=src/brew/version.rs
+          if [[ -a "$file" ]] && [[ "$(cat "$file")" =~ let\ delimiter_chars\ =\ \[(.+)\]\; ]]; then
+            echo 'VERSIONS<<EOF' >> $GITHUB_ENV
+            curl -s https://formulae.brew.sh/api/versions-formulae.json https://formulae.brew.sh/api/versions-casks.json |
+              jq -s --argjson delimiters "[${BASH_REMATCH[1]//\'/\"}]" '
+                flatten | map(
+                  to_entries
+                    | map(select(.value.version | test("[^[:alnum:]" + ($delimiters | join("") | sub("-"; "\\-")) + "]")))
+                    | from_entries
+                )
+              ' >> $GITHUB_ENV
+            echo 'EOF' >> $GITHUB_ENV
+          fi
+      - name: Create issue
+        uses: actions/github-script@v5
+        env:
+          VERSIONS: ${{ env.VERSIONS }}
+        with:
+          script: |
+            const script = require('./scripts/create-issue.js');
+            await script({ github, context, core });
