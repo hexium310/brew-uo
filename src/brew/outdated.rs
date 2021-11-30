@@ -74,9 +74,45 @@ mod tests {
               "current_version": "8.0.13",
               "pinned": false,
               "pinned_version": null
+            },
+            {
+              "name": "picat",
+              "installed_versions": [
+                "3.1.1"
+              ],
+              "current_version": "3.1#2",
+              "pinned": false,
+              "pinned_version": null
+            },
+            {
+              "name": "srmio",
+              "installed_versions": [
+                "0.1.0"
+              ],
+              "current_version": "0.1.1~git1",
+              "pinned": false,
+              "pinned_version": null
             }
           ],
           "casks": [
+            {
+              "name": "atok",
+              "installed_versions": [
+                "2021,32.1.0:try2"
+              ],
+              "current_version": "2021,32.1.0:try3",
+              "pinned": false,
+              "pinned_version": null
+            },
+            {
+              "name": "duplicati",
+              "installed_versions": [
+                "2.0.6.1,beta:2021-05-03"
+              ],
+              "current_version": "2.0.6.3,beta:2021-06-17",
+              "pinned": false,
+              "pinned_version": null
+            },
             {
               "name": "powershell",
               "installed_versions": [
@@ -115,8 +151,28 @@ mod tests {
                         installed_versions: vec!["8.0.12".to_owned()],
                         current_version: "8.0.13".to_owned(),
                     },
+                    Formula {
+                        name: "picat".to_owned(),
+                        installed_versions: vec!["3.1.1".to_owned()],
+                        current_version: "3.1#2".to_owned(),
+                    },
+                    Formula {
+                        name: "srmio".to_owned(),
+                        installed_versions: vec!["0.1.0".to_owned()],
+                        current_version: "0.1.1~git1".to_owned(),
+                    },
                 ],
                 casks: vec![
+                    Formula {
+                        name: "atok".to_owned(),
+                        installed_versions: vec!["2021,32.1.0:try2".to_owned()],
+                        current_version: "2021,32.1.0:try3".to_owned(),
+                    },
+                    Formula {
+                        name: "duplicati".to_owned(),
+                        installed_versions: vec!["2.0.6.1,beta:2021-05-03".to_owned()],
+                        current_version: "2.0.6.3,beta:2021-06-17".to_owned(),
+                    },
                     Formula {
                         name: "powershell".to_owned(),
                         installed_versions: vec!["7.1.0".to_owned()],
@@ -158,9 +214,21 @@ mod tests {
         assert_eq!(
             outdated.to_csv().unwrap(),
             format!(
-                "curl,7.80.0,->,7.80.0_{}\nphp,8.0.12,->,8.0.{}\npowershell,7.1.0,->,7.{}\nsequel-ace,\"3.4.1,3041\",->,\"3.4.{}\"\n",
+                r#"curl,7.80.0,->,7.80.0_{}
+php,8.0.12,->,8.0.{}
+picat,3.1.1,->,3.1#{}
+srmio,0.1.0,->,0.1.{}
+atok,"2021,32.1.0:try2",->,"2021,32.1.0:{}"
+duplicati,"2.0.6.1,beta:2021-05-03",->,"2.0.6.{}"
+powershell,7.1.0,->,7.{}
+sequel-ace,"3.4.1,3041",->,"3.4.{}"
+"#,
                 "1".color(VERSION_COLOR.other),
                 "13".color(VERSION_COLOR.other),
+                "2".color(VERSION_COLOR.other),
+                "1~git1".color(VERSION_COLOR.other),
+                "try3".color(VERSION_COLOR.other),
+                "3,beta:2021-06-17".color(VERSION_COLOR.other),
                 "2.0".color(VERSION_COLOR.minor),
                 "2,3043".color(VERSION_COLOR.other)
             )
@@ -175,21 +243,37 @@ mod tests {
         assert_eq!(
             outdated.format().unwrap(),
             format!(
-                "{}\n{}\n{}\n{}\n",
+                "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
                 format!(
-                    "curl          7.80.0        ->    7.80.0_{ }    ",
+                    "curl          7.80.0                     ->    7.80.0_{}    ",
                     "1".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "php           8.0.12        ->    8.0.{    }    ",
+                    "php           8.0.12                     ->    8.0.{}    ",
                     "13".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "powershell    7.1.0         ->    7.{      }    ",
+                    "picat         3.1.1                      ->    3.1#{}    ",
+                    "2".color(VERSION_COLOR.other)
+                ),
+                format!(
+                    "srmio         0.1.0                      ->    0.1.{}    ",
+                    "1~git1".color(VERSION_COLOR.other)
+                ),
+                format!(
+                    "atok          2021,32.1.0:try2           ->    2021,32.1.0:{}    ",
+                    "try3".color(VERSION_COLOR.other)
+                ),
+                format!(
+                    "duplicati     2.0.6.1,beta:2021-05-03    ->    2.0.6.{}    ",
+                    "3,beta:2021-06-17".color(VERSION_COLOR.other)
+                ),
+                format!(
+                    "powershell    7.1.0                      ->    7.{}    ",
                     "2.0".color(VERSION_COLOR.minor)
                 ),
                 format!(
-                    "sequel-ace    3.4.1,3041    ->    3.4.{     }    ",
+                    "sequel-ace    3.4.1,3041                 ->    3.4.{}    ",
                     "2,3043".color(VERSION_COLOR.other)
                 )
             )
