@@ -13,7 +13,7 @@ use crate::range::*;
 pub struct VersionComparison {
     pub latest_installed_version: String,
     pub current_version: String,
-    pub delimiters: Vec<String>,
+    pub delimiters: Vec<char>,
 }
 
 impl VersionComparison {
@@ -44,14 +44,14 @@ impl VersionComparison {
                                 || ("".to_owned(), "".to_owned()),
                                 |delimiters_position| {
                                     (
-                                        self.build_version(current_version_parts, ..position, ..delimiters_position)
+                                        self.build_version(..position, ..delimiters_position)
                                             .unwrap(),
-                                        self.delimiters[delimiters_position].to_owned(),
+                                        self.delimiters[delimiters_position].to_string(),
                                     )
                                 },
                             );
                         let current_version_parts_with_change = self
-                            .build_version(current_version_parts, position.., position..)
+                            .build_version(position.., position..)
                             .unwrap()
                             .color(match position {
                                 0 => VERSION_COLOR.major,
@@ -78,7 +78,7 @@ impl VersionComparison {
         installed_versions.last().unwrap().to_owned()
     }
 
-    fn get_delimiters(version_str: &str) -> Vec<String> {
+    fn get_delimiters(version_str: &str) -> Vec<char> {
         let delimiter_chars = ['.', '_', '-', '+', ',', '#', '~', ':'];
 
         version_str
@@ -87,7 +87,8 @@ impl VersionComparison {
                     .iter()
                     .any(|&delimiter_char| delimiter_char == version_char)
             })
-            .map(|v| v.to_owned())
+            .map(|v| v.chars())
+            .flatten()
             .collect::<Vec<_>>()
     }
 
@@ -105,7 +106,7 @@ impl VersionComparison {
         })
     }
 
-    fn build_version<R>(&self, version_parts: &[Part], version_range: R, delimiter_range: R) -> Result<String, Error>
+    fn build_version<R>(&self, version_range: R, delimiter_range: R) -> Result<String, Error>
     where
         R: std::ops::RangeBounds<usize>,
     {
@@ -122,6 +123,10 @@ impl VersionComparison {
             _ => (),
         };
 
+        let version_parts = self
+            .current_version
+            .split(&self.delimiters[..])
+            .collect::<Vec<_>>();
         let version_parts = version_parts
             .range(&version_range)
             .ok_or(Error::IndexOutOfRange)?
@@ -155,7 +160,7 @@ mod tests {
     fn generate_delimiters_should_return_delimiters_list() {
         assert_eq!(
             VersionComparison::get_delimiters("1.2_3-4"),
-            [".".to_owned(), "_".to_owned(), "-".to_owned()]
+            ['.', '_', '-']
         );
     }
 
@@ -173,33 +178,33 @@ mod tests {
 
     #[test]
     fn build_version_should_return_string() {
-        let (version, ref parts) = before(vec![""], "1.0.0_1");
+        let (version, ..) = before(vec![""], "1.0.0_1");
 
-        assert_eq!(version.build_version(parts, ..1, ..0).ok(), Some("1".to_owned()));
-        assert_eq!(version.build_version(parts, ..2, ..1).ok(), Some("1.0".to_owned()));
-        assert_eq!(version.build_version(parts, ..3, ..2).ok(), Some("1.0.0".to_owned()));
-        assert_eq!(version.build_version(parts, ..4, ..3).ok(), Some("1.0.0_1".to_owned()));
+        assert_eq!(version.build_version(..1, ..0).ok(), Some("1".to_owned()));
+        assert_eq!(version.build_version(..2, ..1).ok(), Some("1.0".to_owned()));
+        assert_eq!(version.build_version(..3, ..2).ok(), Some("1.0.0".to_owned()));
+        assert_eq!(version.build_version(..4, ..3).ok(), Some("1.0.0_1".to_owned()));
 
-        assert_eq!(version.build_version(parts, 0.., 0..).ok(), Some("1.0.0_1".to_owned()));
-        assert_eq!(version.build_version(parts, 1.., 1..).ok(), Some("0.0_1".to_owned()));
-        assert_eq!(version.build_version(parts, 2.., 2..).ok(), Some("0_1".to_owned()));
-        assert_eq!(version.build_version(parts, 3.., 3..).ok(), Some("1".to_owned()));
+        assert_eq!(version.build_version(0.., 0..).ok(), Some("1.0.0_1".to_owned()));
+        assert_eq!(version.build_version(1.., 1..).ok(), Some("0.0_1".to_owned()));
+        assert_eq!(version.build_version(2.., 2..).ok(), Some("0_1".to_owned()));
+        assert_eq!(version.build_version(3.., 3..).ok(), Some("1".to_owned()));
     }
 
     #[test]
     #[should_panic(expected = "same")]
     fn build_version_should_panic_when_passed_two_ranges_start_is_not_same() {
-        let (version, ref parts) = before(vec![""], "1.0.0_1");
+        let (version, ..) = before(vec![""], "1.0.0_1");
 
-        let _ = version.build_version(parts, 0.., 1..);
+        let _ = version.build_version(0.., 1..);
     }
 
     #[test]
     #[should_panic(expected = "greater than")]
     fn test_should_panic_build_version_first_range_end_not_greater_than_second_range_end() {
-        let (version, ref parts) = before(vec![""], "1.0.0_1");
+        let (version, ..) = before(vec![""], "1.0.0_1");
 
-        let _ = version.build_version(parts, ..1, ..1);
+        let _ = version.build_version(..1, ..1);
     }
 
     #[test]
