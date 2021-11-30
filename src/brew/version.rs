@@ -44,8 +44,7 @@ impl VersionComparison {
                                 || ("".to_owned(), "".to_owned()),
                                 |delimiters_position| {
                                     (
-                                        self.build_version(..position, ..delimiters_position)
-                                            .unwrap(),
+                                        self.build_version(..position, ..delimiters_position).unwrap(),
                                         self.delimiters[delimiters_position].to_string(),
                                     )
                                 },
@@ -123,10 +122,7 @@ impl VersionComparison {
             _ => (),
         };
 
-        let version_parts = self
-            .current_version
-            .split(&self.delimiters[..])
-            .collect::<Vec<_>>();
+        let version_parts = self.current_version.split(&self.delimiters[..]).collect::<Vec<_>>();
         let version_parts = version_parts
             .range(&version_range)
             .ok_or(Error::IndexOutOfRange)?
@@ -158,10 +154,7 @@ mod tests {
 
     #[test]
     fn generate_delimiters_should_return_delimiters_list() {
-        assert_eq!(
-            VersionComparison::get_delimiters("1.2_3-4"),
-            ['.', '_', '-']
-        );
+        assert_eq!(VersionComparison::get_delimiters("1.2_3-4"), ['.', '_', '-']);
     }
 
     #[test]
