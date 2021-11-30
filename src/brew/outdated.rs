@@ -53,55 +53,56 @@ mod tests {
     use super::*;
     use crate::color::VERSION_COLOR;
 
+    const DATA: &str = r#"
+        {
+          "formulae": [
+            {
+              "name": "curl",
+              "installed_versions": [
+                "7.80.0",
+                "7.80.0"
+              ],
+              "current_version": "7.80.0_1",
+              "pinned": false,
+              "pinned_version": null
+            },
+            {
+              "name": "php",
+              "installed_versions": [
+                "8.0.12"
+              ],
+              "current_version": "8.0.13",
+              "pinned": false,
+              "pinned_version": null
+            }
+          ],
+          "casks": [
+            {
+              "name": "powershell",
+              "installed_versions": [
+                "7.1.0"
+              ],
+              "current_version": "7.2.0",
+              "pinned": false,
+              "pinned_version": null
+            },
+            {
+              "name": "sequel-ace",
+              "installed_versions": [
+                "3.4.1,3041"
+              ],
+              "current_version": "3.4.2,3043",
+              "pinned": false,
+              "pinned_version": null
+            }
+          ]
+        }
+    "#;
+
     #[test]
     fn new_should_returns_outdated_struct() {
-        let data = r#"
-            {
-              "formulae": [
-                {
-                  "name": "curl",
-                  "installed_versions": [
-                    "7.80.0",
-                    "7.80.0"
-                  ],
-                  "current_version": "7.80.0_1",
-                  "pinned": false,
-                  "pinned_version": null
-                },
-                {
-                  "name": "php",
-                  "installed_versions": [
-                    "8.0.12"
-                  ],
-                  "current_version": "8.0.13",
-                  "pinned": false,
-                  "pinned_version": null
-                }
-              ],
-              "casks": [
-                {
-                  "name": "powershell",
-                  "installed_versions": [
-                    "7.1.0"
-                  ],
-                  "current_version": "7.2.0",
-                  "pinned": false,
-                  "pinned_version": null
-                },
-                {
-                  "name": "sequel-ace",
-                  "installed_versions": [
-                    "3.4.1,3041"
-                  ],
-                  "current_version": "3.4.2,3043",
-                  "pinned": false,
-                  "pinned_version": null
-                }
-              ]
-            }
-        "#;
         assert_eq!(
-            Outdated::new(data).unwrap(),
+            Outdated::new(DATA).unwrap(),
             Outdated {
                 formulae: vec![
                     Formula {
@@ -153,52 +154,7 @@ mod tests {
     fn to_csv_should_returns_csv_with_color() {
         use colored::Colorize;
 
-        let data = r#"
-            {
-              "formulae": [
-                {
-                  "name": "curl",
-                  "installed_versions": [
-                    "7.80.0",
-                    "7.80.0"
-                  ],
-                  "current_version": "7.80.0_1",
-                  "pinned": false,
-                  "pinned_version": null
-                },
-                {
-                  "name": "php",
-                  "installed_versions": [
-                    "8.0.12"
-                  ],
-                  "current_version": "8.0.13",
-                  "pinned": false,
-                  "pinned_version": null
-                }
-              ],
-              "casks": [
-                {
-                  "name": "powershell",
-                  "installed_versions": [
-                    "7.1.0"
-                  ],
-                  "current_version": "7.2.0",
-                  "pinned": false,
-                  "pinned_version": null
-                },
-                {
-                  "name": "sequel-ace",
-                  "installed_versions": [
-                    "3.4.1,3041"
-                  ],
-                  "current_version": "3.4.2,3043",
-                  "pinned": false,
-                  "pinned_version": null
-                }
-              ]
-            }
-        "#;
-        let outdated = Outdated::new(data).unwrap();
+        let outdated = Outdated::new(DATA).unwrap();
         assert_eq!(
             outdated.to_csv().unwrap(),
             format!(
@@ -215,52 +171,7 @@ mod tests {
     fn format_should_returns_tabular_formulae() {
         use colored::Colorize;
 
-        let data = r#"
-            {
-              "formulae": [
-                {
-                  "name": "curl",
-                  "installed_versions": [
-                    "7.80.0",
-                    "7.80.0"
-                  ],
-                  "current_version": "7.80.0_1",
-                  "pinned": false,
-                  "pinned_version": null
-                },
-                {
-                  "name": "php",
-                  "installed_versions": [
-                    "8.0.12"
-                  ],
-                  "current_version": "8.0.13",
-                  "pinned": false,
-                  "pinned_version": null
-                }
-              ],
-              "casks": [
-                {
-                  "name": "powershell",
-                  "installed_versions": [
-                    "7.1.0"
-                  ],
-                  "current_version": "7.2.0",
-                  "pinned": false,
-                  "pinned_version": null
-                },
-                {
-                  "name": "sequel-ace",
-                  "installed_versions": [
-                    "3.4.1,3041"
-                  ],
-                  "current_version": "3.4.2,3043",
-                  "pinned": false,
-                  "pinned_version": null
-                }
-              ]
-            }
-        "#;
-        let outdated = Outdated::new(data).unwrap();
+        let outdated = Outdated::new(DATA).unwrap();
         assert_eq!(
             outdated.format().unwrap(),
             format!(
