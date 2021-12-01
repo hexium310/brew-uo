@@ -61,6 +61,10 @@ module.exports = async ({ github, context, core }) => {
   const { VERSIONS } = process.env;
   const { owner, repo } = context.repo;
 
+  if (Object.keys(JSON.parse(VERSIONS)).length === 0) {
+    return;
+  }
+
   const { data: issues } = await github.rest.issues.listForRepo({
     owner,
     repo,
