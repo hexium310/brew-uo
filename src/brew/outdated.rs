@@ -5,6 +5,12 @@ use crate::brew::version::*;
 use crate::error::Error;
 
 #[derive(Debug, Deserialize, PartialEq)]
+pub struct JSON {
+    pub formulae: Vec<Formula>,
+    pub casks: Vec<Cask>,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Outdated {
     pub formulae: Vec<Formula>,
     pub casks: Vec<Formula>,
@@ -17,9 +23,29 @@ pub struct Formula {
     current_version: String,
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct Cask {
+    name: String,
+    installed_versions: String,
+    current_version: String,
+}
+
 impl Outdated {
     pub(crate) fn new(data: &str) -> serde_json::Result<Self> {
-        let outdated = serde_json::from_str::<Outdated>(data)?;
+        let json = serde_json::from_str::<JSON>(data)?;
+
+        let casks = json.casks.iter().map(|v| {
+            Formula {
+                name: v.name.clone(),
+                installed_versions: v.installed_versions.split(", ").map(|v| v.to_owned()).collect::<Vec<String>>(),
+                current_version: v.current_version.clone(),
+            }
+        }).collect::<Vec<Formula>>();
+        let outdated = Outdated {
+            formulae: json.formulae,
+            casks,
+        };
+
         Ok(outdated)
     }
 
@@ -97,36 +123,28 @@ mod tests {
           "casks": [
             {
               "name": "atok",
-              "installed_versions": [
-                "2021,32.1.0:try2"
-              ],
+              "installed_versions": "2021,32.1.0:try2",
               "current_version": "2021,32.1.0:try3",
               "pinned": false,
               "pinned_version": null
             },
             {
               "name": "duplicati",
-              "installed_versions": [
-                "2.0.6.1,beta:2021-05-03"
-              ],
+              "installed_versions": "2.0.6.1,beta:2021-05-03",
               "current_version": "2.0.6.3,beta:2021-06-17",
               "pinned": false,
               "pinned_version": null
             },
             {
               "name": "powershell",
-              "installed_versions": [
-                "7.1.0"
-              ],
+              "installed_versions": "7.1.0",
               "current_version": "7.2.0",
               "pinned": false,
               "pinned_version": null
             },
             {
               "name": "sequel-ace",
-              "installed_versions": [
-                "3.4.1,3041"
-              ],
+              "installed_versions": "3.4.0,3038, 3.4.1,3041",
               "current_version": "3.4.2,3043",
               "pinned": false,
               "pinned_version": null
@@ -180,7 +198,7 @@ mod tests {
                     },
                     Formula {
                         name: "sequel-ace".to_owned(),
-                        installed_versions: vec!["3.4.1,3041".to_owned()],
+                        installed_versions: vec!["3.4.0,3038".to_owned(), "3.4.1,3041".to_owned()],
                         current_version: "3.4.2,3043".to_owned(),
                     }
                 ],
