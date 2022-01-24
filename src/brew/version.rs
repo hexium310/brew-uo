@@ -1,4 +1,4 @@
-use std::ops::Bound::*;
+use std::slice::SliceIndex;
 
 use colored::Colorize;
 use itertools::EitherOrBoth::Both;
@@ -7,7 +7,6 @@ use version_compare::{compare_to, Cmp, Part, Version};
 
 use crate::color::VERSION_COLOR;
 use crate::error::Error;
-use crate::range::*;
 
 #[derive(Clone, Debug)]
 pub struct VersionComparison {
@@ -131,33 +130,20 @@ impl VersionComparison {
         })
     }
 
-    fn build_version<R>(&self, version_range: R, delimiter_range: R) -> Result<String, Error>
+    fn build_version<I>(&self, version_range: I, delimiter_range: I) -> Result<String, Error>
     where
-        R: std::ops::RangeBounds<usize>,
+        I: SliceIndex<[String], Output = [String]>,
     {
-        match (version_range.start_bound(), delimiter_range.start_bound()) {
-            (Included(&v), Included(&d)) | (Excluded(&v), Excluded(&d)) if v != d => {
-                panic!("{}", Error::VersionRangeStart)
-            },
-            _ => (),
-        };
-        match (version_range.end_bound(), delimiter_range.end_bound()) {
-            (Included(&v), Included(&d)) | (Excluded(&v), Excluded(&d)) if v <= d => {
-                panic!("{}", Error::VersionRangeEnd)
-            },
-            _ => (),
-        };
-
         let version_parts = self
             .current_version_parts
-            .range(&version_range)
+            .get(version_range)
             .ok_or(Error::IndexOutOfRange)?
-            .map(|v| v.to_string());
+            .iter();
         let delimiters = self
             .delimiters
-            .range(&delimiter_range)
+            .get(delimiter_range)
             .ok_or(Error::IndexOutOfRange)?
-            .map(|v| v.to_string());
+            .iter();
 
         Ok(version_parts.interleave(delimiters).join(""))
     }
@@ -224,22 +210,6 @@ mod tests {
         assert_eq!(version.build_version(1.., 1..).ok(), Some("0.0_1".to_owned()));
         assert_eq!(version.build_version(2.., 2..).ok(), Some("0_1".to_owned()));
         assert_eq!(version.build_version(3.., 3..).ok(), Some("1".to_owned()));
-    }
-
-    #[test]
-    #[should_panic(expected = "same")]
-    fn build_version_should_panic_when_passed_two_ranges_start_is_not_same() {
-        let (version, ..) = before(vec![""], "1.0.0_1");
-
-        let _ = version.build_version(0.., 1..);
-    }
-
-    #[test]
-    #[should_panic(expected = "greater than")]
-    fn test_should_panic_build_version_first_range_end_not_greater_than_second_range_end() {
-        let (version, ..) = before(vec![""], "1.0.0_1");
-
-        let _ = version.build_version(..1, ..1);
     }
 
     #[test]

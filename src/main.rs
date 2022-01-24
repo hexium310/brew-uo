@@ -3,7 +3,6 @@
 mod brew;
 mod color;
 mod error;
-mod range;
 
 use std::process::Command;
 

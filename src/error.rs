@@ -7,8 +7,6 @@ pub enum Error {
     Command(std::io::Error),
     FromUtf8(std::string::FromUtf8Error),
     IndexOutOfRange,
-    VersionRangeEnd,
-    VersionRangeStart,
 }
 
 impl fmt::Display for Error {
@@ -19,11 +17,6 @@ impl fmt::Display for Error {
             Error::Command(ref err) => write!(fmt, "{}", err),
             Error::FromUtf8(ref err) => write!(fmt, "{}", err),
             Error::IndexOutOfRange => write!(fmt, "The index out of range."),
-            Error::VersionRangeEnd => write!(
-                fmt,
-                "The end of range have to be greater than the end of another range."
-            ),
-            Error::VersionRangeStart => write!(fmt, "The start of two ranges have to be the same."),
         }
     }
 }
