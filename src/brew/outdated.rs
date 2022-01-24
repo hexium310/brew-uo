@@ -5,7 +5,7 @@ use crate::brew::version::*;
 use crate::error::Error;
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct JSON {
+pub struct Json {
     pub formulae: Vec<Formula>,
     pub casks: Vec<Cask>,
 }
@@ -32,7 +32,7 @@ pub struct Cask {
 
 impl Outdated {
     pub(crate) fn new(data: &str) -> serde_json::Result<Self> {
-        let json = serde_json::from_str::<JSON>(data)?;
+        let json = serde_json::from_str::<Json>(data)?;
 
         let casks = json.casks.iter().map(|v| {
             Formula {
