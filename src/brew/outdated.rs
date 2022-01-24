@@ -93,6 +93,15 @@ mod tests {
               "pinned_version": null
             },
             {
+              "name": "jpeg",
+              "installed_versions": [
+                "9d"
+              ],
+              "current_version": "9e",
+              "pinned": false,
+              "pinned_version": null
+            },
+            {
               "name": "php",
               "installed_versions": [
                 "8.0.12"
@@ -165,6 +174,11 @@ mod tests {
                         current_version: "7.80.0_1".to_owned(),
                     },
                     Formula {
+                        name: "jpeg".to_owned(),
+                        installed_versions: vec!["9d".to_owned()],
+                        current_version: "9e".to_owned(),
+                    },
+                    Formula {
                         name: "php".to_owned(),
                         installed_versions: vec!["8.0.12".to_owned()],
                         current_version: "8.0.13".to_owned(),
@@ -233,6 +247,7 @@ mod tests {
             outdated.to_csv().unwrap(),
             format!(
                 r#"curl,7.80.0,->,7.80.0_{}
+jpeg,9d,->,9{}
 php,8.0.12,->,8.0.{}
 picat,3.1.1,->,3.1#{}
 srmio,0.1.0,->,0.1.{}
@@ -242,6 +257,7 @@ powershell,7.1.0,->,7.{}
 sequel-ace,"3.4.1,3041",->,"3.4.{}"
 "#,
                 "1".color(VERSION_COLOR.other),
+                "e".color(VERSION_COLOR.minor),
                 "13".color(VERSION_COLOR.other),
                 "2".color(VERSION_COLOR.other),
                 "1~git1".color(VERSION_COLOR.other),
@@ -261,10 +277,14 @@ sequel-ace,"3.4.1,3041",->,"3.4.{}"
         assert_eq!(
             outdated.format().unwrap(),
             format!(
-                "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
+                "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
                 format!(
                     "curl          7.80.0                     ->    7.80.0_{}    ",
                     "1".color(VERSION_COLOR.other)
+                ),
+                format!(
+                    "jpeg          9d                         ->    9{}    ",
+                    "e".color(VERSION_COLOR.minor)
                 ),
                 format!(
                     "php           8.0.12                     ->    8.0.{}    ",
