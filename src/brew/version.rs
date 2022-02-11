@@ -46,7 +46,7 @@ impl VersionComparison {
                                 |delimiters_position| {
                                     (
                                         self.build_version(..position, ..delimiters_position).unwrap(),
-                                        self.delimiters[delimiters_position].to_string(),
+                                        self.delimiters[delimiters_position].to_owned(),
                                     )
                                 },
                             );
@@ -71,10 +71,10 @@ impl VersionComparison {
     }
 
     fn get_latest_installed_version(installed_versions: impl IntoIterator<Item = impl AsRef<str>>) -> String {
-        let installed_versions = installed_versions
+        let installed_versions: Vec<String> = installed_versions
             .into_iter()
             .map(|v| v.as_ref().to_owned())
-            .collect::<Vec<String>>();
+            .collect();
         installed_versions.last().unwrap().to_owned()
     }
 
@@ -104,7 +104,7 @@ impl VersionComparison {
 
                     if let Some(delimiter) = current_and_forward.chars().nth(part.len()) {
                         let delimiter = if delimiter.is_ascii_alphabetic() {
-                            "".to_string()
+                            "".to_owned()
                         } else {
                             delimiter.to_string()
                         };
@@ -142,8 +142,7 @@ impl VersionComparison {
         let delimiters = self
             .delimiters
             .get(delimiter_range)
-            .ok_or(Error::IndexOutOfRange)?
-            .iter();
+            .ok_or(Error::IndexOutOfRange)?;
 
         Ok(version_parts.interleave(delimiters).join(""))
     }
@@ -169,15 +168,15 @@ mod tests {
         assert_eq!(
             VersionComparison::get_delimiters("1.2_3-4"),
             (
-                vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
-                vec![".".to_string(), "_".to_string(), "-".to_string()],
+                vec!["1".to_owned(), "2".to_owned(), "3".to_owned(), "4".to_owned()],
+                vec![".".to_owned(), "_".to_owned(), "-".to_owned()],
             )
         );
         assert_eq!(
             VersionComparison::get_delimiters("0001.0002a.0"),
             (
-                vec!["0001".to_string(), "0002".to_string(), "a".to_string(), "0".to_string()],
-                vec![".".to_string(), "".to_string(), ".".to_string()],
+                vec!["0001".to_owned(), "0002".to_owned(), "a".to_owned(), "0".to_owned()],
+                vec![".".to_owned(), "".to_owned(), ".".to_owned()],
             )
         );
     }

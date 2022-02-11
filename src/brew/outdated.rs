@@ -64,9 +64,9 @@ impl Outdated {
     fn to_csv(&self) -> Result<String, Error> {
         let mut writer = csv::Writer::from_writer(vec![]);
         for Formula {
-            ref name,
-            ref installed_versions,
-            ref current_version,
+            name,
+            installed_versions,
+            current_version,
         } in [&self.formulae, &self.casks].into_iter().flatten()
         {
             let version = VersionComparison::new(installed_versions, current_version);

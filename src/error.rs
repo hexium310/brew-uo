@@ -22,25 +22,25 @@ impl fmt::Display for Error {
 }
 
 impl From<csv::Error> for Error {
-    fn from(err: csv::Error) -> Error {
+    fn from(err: csv::Error) -> Self {
         Error::Csv(err)
     }
 }
 
 impl From<csv::IntoInnerError<csv::Writer<Vec<u8>>>> for Error {
-    fn from(err: csv::IntoInnerError<csv::Writer<Vec<u8>>>) -> Error {
+    fn from(err: csv::IntoInnerError<csv::Writer<Vec<u8>>>) -> Self {
         Error::CsvIntoInner(Box::new(err))
     }
 }
 
 impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Error {
+    fn from(err: std::io::Error) -> Self {
         Error::Command(err)
     }
 }
 
 impl From<std::string::FromUtf8Error> for Error {
-    fn from(err: std::string::FromUtf8Error) -> Error {
+    fn from(err: std::string::FromUtf8Error) -> Self {
         Error::FromUtf8(err)
     }
 }
