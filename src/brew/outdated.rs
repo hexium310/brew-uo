@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use prettytable::{format, Table};
 use serde::Deserialize;
 
@@ -23,26 +24,29 @@ pub struct Formula {
     current_version: String,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Cask {
     name: String,
     installed_versions: String,
     current_version: String,
 }
 
+impl From<Cask> for Formula {
+    fn from(c: Cask) -> Self {
+        Formula {
+            name: c.name,
+            installed_versions: c.installed_versions.split(", ").map_into().collect(),
+            current_version: c.current_version,
+        }
+    }
+}
+
 impl Outdated {
     pub(crate) fn new(data: &str) -> serde_json::Result<Self> {
-        let json = serde_json::from_str::<Json>(data)?;
-
-        let casks = json.casks.iter().map(|v| {
-            Formula {
-                name: v.name.clone(),
-                installed_versions: v.installed_versions.split(", ").map(|v| v.to_owned()).collect::<Vec<String>>(),
-                current_version: v.current_version.clone(),
-            }
-        }).collect::<Vec<Formula>>();
+        let Json { formulae, casks } = serde_json::from_str(data)?;
+        let casks = casks.into_iter().map_into().collect();
         let outdated = Outdated {
-            formulae: json.formulae,
+            formulae,
             casks,
         };
 

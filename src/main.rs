@@ -32,7 +32,7 @@ fn main() {
 
 fn run_outdated() -> Result<String, Error> {
     let result = Command::new("brew").args(&["outdated", "--json"]).output()?;
-    Ok(stringify(&result.stdout))
+    Ok(stringify(&result.stdout).to_owned())
 }
 
 fn run_update() -> Result<(), Error> {
@@ -42,6 +42,6 @@ fn run_update() -> Result<(), Error> {
     }
 }
 
-fn stringify(value: &[u8]) -> String {
-    String::from_utf8(value.to_owned()).unwrap_or_else(|_| "".to_owned())
+fn stringify(value: &[u8]) -> &str {
+    std::str::from_utf8(value).unwrap_or_default()
 }
