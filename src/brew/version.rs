@@ -1,12 +1,12 @@
 use std::slice::SliceIndex;
 
+use anyhow::{Context, Result};
 use colored::Colorize;
 use itertools::EitherOrBoth::Both;
 use itertools::Itertools;
 use version_compare::{compare_to, Cmp, Part, Version};
 
 use crate::color::VERSION_COLOR;
-use crate::error::Error;
 
 #[derive(Clone, Debug)]
 pub struct VersionComparison {
@@ -130,19 +130,19 @@ impl VersionComparison {
         })
     }
 
-    fn build_version<I>(&self, version_range: I, delimiter_range: I) -> Result<String, Error>
+    fn build_version<I>(&self, version_range: I, delimiter_range: I) -> Result<String>
     where
         I: SliceIndex<[String], Output = [String]>,
     {
         let version_parts = self
             .current_version_parts
             .get(version_range)
-            .ok_or(Error::IndexOutOfRange)?
+            .with_context(|| format!("Index out of range"))?
             .iter();
         let delimiters = self
             .delimiters
             .get(delimiter_range)
-            .ok_or(Error::IndexOutOfRange)?;
+            .with_context(|| format!("Index out of range"))?;
 
         Ok(version_parts.interleave(delimiters).join(""))
     }

@@ -5,6 +5,7 @@ authors = ["Hexin <hexium310@gmail.com>"]
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.53"
 colored = "2.0.0"
 csv = "1.1.6"
 itertools = "0.10.1"

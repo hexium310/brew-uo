@@ -1,9 +1,9 @@
+use anyhow::Result;
 use itertools::Itertools;
 use prettytable::{format, Table};
 use serde::Deserialize;
 
 use crate::brew::version::*;
-use crate::error::Error;
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Json {
@@ -42,7 +42,7 @@ impl From<Cask> for Formula {
 }
 
 impl Outdated {
-    pub(crate) fn new(data: &str) -> serde_json::Result<Option<Self>> {
+    pub(crate) fn new(data: &str) -> Result<Option<Self>> {
         let Json { formulae, casks } = serde_json::from_str(data)?;
         let casks = casks.into_iter().map_into().collect_vec();
         if formulae.is_empty() && casks.is_empty() {
@@ -56,7 +56,7 @@ impl Outdated {
         Ok(Some(outdated))
     }
 
-    pub fn format(&self) -> Result<String, Error> {
+    pub fn format(&self) -> Result<String> {
         let mut table = Table::from_csv_string(&self.to_csv()?)?;
         let table_format = format::FormatBuilder::new().padding(0, 4).build();
         table.set_format(table_format);
@@ -64,7 +64,7 @@ impl Outdated {
         Ok(table.to_string())
     }
 
-    fn to_csv(&self) -> Result<String, Error> {
+    fn to_csv(&self) -> Result<String> {
         let mut writer = csv::Writer::from_writer(vec![]);
         for Formula {
             name,

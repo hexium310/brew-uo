@@ -2,14 +2,13 @@
 
 mod brew;
 mod color;
-mod error;
 
 use std::process::Command;
 
+use anyhow::Result;
 use colored::Colorize;
 
 use crate::brew::*;
-use crate::error::Error;
 
 fn main() {
     if let Err(err) = run_update() {
@@ -32,12 +31,12 @@ fn main() {
     }
 }
 
-fn run_outdated() -> Result<String, Error> {
+fn run_outdated() -> Result<String> {
     let result = Command::new("brew").args(&["outdated", "--json"]).output()?;
     Ok(stringify(&result.stdout).to_owned())
 }
 
-fn run_update() -> Result<(), Error> {
+fn run_update() -> Result<()> {
     try {
         let mut update_process = Command::new("brew").arg("update").spawn()?;
         update_process.wait()?;
