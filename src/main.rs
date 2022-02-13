@@ -19,14 +19,16 @@ fn main() {
     let outdated_result = run_outdated().expect("brew oudated --json failed");
     let outdated = Outdated::new(&outdated_result).unwrap();
 
-    match outdated.format() {
-        Ok(output) => {
-            println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
-            print!("{}", output);
-        },
-        Err(err) => {
-            println!("outdated error: {:?}", err);
-        },
+    if let Some(outdated) = outdated {
+        match outdated.format() {
+            Ok(output) => {
+                println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
+                print!("{}", output);
+            },
+            Err(err) => {
+                println!("outdated error: {:?}", err);
+            },
+        }
     }
 }
 

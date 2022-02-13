@@ -42,15 +42,18 @@ impl From<Cask> for Formula {
 }
 
 impl Outdated {
-    pub(crate) fn new(data: &str) -> serde_json::Result<Self> {
+    pub(crate) fn new(data: &str) -> serde_json::Result<Option<Self>> {
         let Json { formulae, casks } = serde_json::from_str(data)?;
-        let casks = casks.into_iter().map_into().collect();
+        let casks = casks.into_iter().map_into().collect_vec();
+        if formulae.is_empty() && casks.is_empty() {
+            return Ok(None);
+        }
         let outdated = Outdated {
             formulae,
             casks,
         };
 
-        Ok(outdated)
+        Ok(Some(outdated))
     }
 
     pub fn format(&self) -> Result<String, Error> {
@@ -171,7 +174,7 @@ mod tests {
     #[test]
     fn new_should_returns_outdated_struct() {
         assert_eq!(
-            Outdated::new(DATA).unwrap(),
+            Outdated::new(DATA).unwrap().unwrap(),
             Outdated {
                 formulae: vec![
                     Formula {
@@ -235,20 +238,14 @@ mod tests {
               ]
             }
         "#;
-        assert_eq!(
-            Outdated::new(data).unwrap(),
-            Outdated {
-                formulae: vec![],
-                casks: vec![],
-            }
-        );
+        assert!(Outdated::new(data).unwrap().is_none());
     }
 
     #[test]
     fn to_csv_should_returns_csv_with_color() {
         use colored::Colorize;
 
-        let outdated = Outdated::new(DATA).unwrap();
+        let outdated = Outdated::new(DATA).unwrap().unwrap();
         assert_eq!(
             outdated.to_csv().unwrap(),
             format!(
@@ -279,7 +276,7 @@ sequel-ace,"3.4.1,3041",->,"3.4.{}"
     fn format_should_returns_tabular_formulae() {
         use colored::Colorize;
 
-        let outdated = Outdated::new(DATA).unwrap();
+        let outdated = Outdated::new(DATA).unwrap().unwrap();
         assert_eq!(
             outdated.format().unwrap(),
             format!(
