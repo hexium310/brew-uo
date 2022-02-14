@@ -66,14 +66,17 @@ impl Outdated {
 
     fn to_csv(&self) -> Result<String> {
         let mut writer = csv::Writer::from_writer(vec![]);
-        for Formula {
-            name,
-            installed_versions,
-            current_version,
-        } in [&self.formulae, &self.casks].into_iter().flatten()
-        {
-            let version = VersionComparison::new(installed_versions, current_version);
-            writer.serialize((name, &version.latest_installed_version, "->", &version.colorize()))?;
+        for Formula { name, installed_versions, current_version } in itertools::chain(&self.formulae, &self.casks) {
+            let latest_installed_version = match installed_versions.last() {
+                Some(installed_version) => installed_version,
+                None => {
+                    println!("There are no installed versions: {name}");
+                    continue;
+                },
+            };
+            let version = VersionComparison::new(latest_installed_version, current_version);
+            let colorized_current_version = version.colorize();
+            writer.serialize((name, latest_installed_version, "->", &colorized_current_version))?;
         }
         writer.flush().unwrap();
         let csv = String::from_utf8(writer.into_inner()?)?;

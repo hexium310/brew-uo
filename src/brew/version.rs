@@ -10,7 +10,7 @@ use crate::color::VERSION_COLOR;
 
 #[derive(Clone, Debug)]
 pub struct VersionComparison {
-    pub latest_installed_version: String,
+    pub installed_version: String,
     pub current_version: String,
     pub delimiters: Vec<String>,
     pub current_version_parts: Vec<String>,
@@ -18,14 +18,13 @@ pub struct VersionComparison {
 
 impl VersionComparison {
     pub fn new(
-        installed_versions: impl IntoIterator<Item = impl AsRef<str>>,
+        installed_version: &str,
         current_version: &str,
     ) -> VersionComparison {
         let (current_version_parts, delimiters) = VersionComparison::get_delimiters(current_version);
-        let latest_installed_version = VersionComparison::get_latest_installed_version(installed_versions);
 
         VersionComparison {
-            latest_installed_version,
+            installed_version: installed_version.to_owned(),
             current_version: current_version.to_owned(),
             delimiters,
             current_version_parts,
@@ -70,14 +69,6 @@ impl VersionComparison {
         )
     }
 
-    fn get_latest_installed_version(installed_versions: impl IntoIterator<Item = impl AsRef<str>>) -> String {
-        let installed_versions: Vec<String> = installed_versions
-            .into_iter()
-            .map(|v| v.as_ref().to_owned())
-            .collect();
-        installed_versions.last().unwrap().to_owned()
-    }
-
     fn get_delimiters(version_str: &str) -> (Vec<String>, Vec<String>) {
         Version::from(version_str).map_or_else(
             || (vec![], vec![]),
@@ -87,7 +78,7 @@ impl VersionComparison {
 
                 for part in version.parts().iter() {
                     let backward = parts.clone().into_iter().interleave(delimiters.clone()).join("");
-                    let current_and_forward = version_str.strip_prefix(&backward).unwrap_or("");
+                    let current_and_forward = version_str.strip_prefix(&backward).unwrap_or_default();
                     let part = current_and_forward.find(|c| c != '0').map_or_else(
                         || part.to_string(),
                         |position| {
@@ -117,7 +108,7 @@ impl VersionComparison {
     }
 
     fn get_diff_position(&self, current_version_parts: &[Part]) -> Option<usize> {
-        Version::from(&self.latest_installed_version).and_then(|newest_current_version| {
+        Version::from(&self.installed_version).and_then(|newest_current_version| {
             current_version_parts
                 .iter()
                 .zip_longest(newest_current_version.parts().iter())
@@ -154,11 +145,11 @@ mod tests {
 
     use super::*;
 
-    fn before(
-        installed_versions: impl IntoIterator<Item = impl AsRef<str>>,
-        current_version: &str,
-    ) -> (VersionComparison, Vec<Part>) {
-        let version = VersionComparison::new(installed_versions, current_version);
+    fn before<'a>(
+        installed_version: &'a str,
+        current_version: &'a str,
+    ) -> (VersionComparison, Vec<Part<'a>>) {
+        let version = VersionComparison::new(installed_version, current_version);
         let parts = Version::from(current_version).unwrap();
         let parts = parts.parts();
 
@@ -185,22 +176,22 @@ mod tests {
 
     #[test]
     fn find_different_part_position_should_return_position() {
-        let (version, ref parts) = before(vec!["2.0"], "1.0");
+        let (version, ref parts) = before("2.0", "1.0");
         assert_eq!(version.get_diff_position(parts), Some(0));
 
-        let (version, ref parts) = before(vec!["1.0a"], "1.0b");
+        let (version, ref parts) = before("1.0a", "1.0b");
         assert_eq!(version.get_diff_position(parts), Some(2));
 
-        let (version, ref parts) = before(vec!["9d"], "9e");
+        let (version, ref parts) = before("9d", "9e");
         assert_eq!(version.get_diff_position(parts), Some(1));
 
-        let (version, ref parts) = before(vec!["1.0"], "1.0");
+        let (version, ref parts) = before("1.0", "1.0");
         assert_eq!(version.get_diff_position(parts), None);
     }
 
     #[test]
     fn build_version_should_return_string() {
-        let (version, ..) = before(vec![""], "1.0.0_1");
+        let (version, ..) = before("", "1.0.0_1");
 
         assert_eq!(version.build_version(..1, ..0).ok(), Some("1".to_owned()));
         assert_eq!(version.build_version(..2, ..1).ok(), Some("1.0".to_owned()));
@@ -216,59 +207,59 @@ mod tests {
     #[test]
     fn colorize_should_return_version_colored() {
         assert_eq!(
-            VersionComparison::new(&["1.0.0"], "2.0.0").colorize(),
+            VersionComparison::new("1.0.0", "2.0.0").colorize(),
             format!("{}{}", "", "2.0.0".color(VERSION_COLOR.major))
         );
         assert_eq!(
-            VersionComparison::new(&["1.0.0"], "1.1.0").colorize(),
+            VersionComparison::new("1.0.0", "1.1.0").colorize(),
             format!("{}{}", "1.", "1.0".color(VERSION_COLOR.minor))
         );
         assert_eq!(
-            VersionComparison::new(&["1.0.0"], "1.0.1").colorize(),
+            VersionComparison::new("1.0.0", "1.0.1").colorize(),
             format!("{}{}", "1.0.", "1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new(&["1.0.0_0"], "1.0.0_1").colorize(),
+            VersionComparison::new("1.0.0_0", "1.0.0_1").colorize(),
             format!("{}{}", "1.0.0_", "1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new(&["1.0.0-0"], "1.0.0-1").colorize(),
+            VersionComparison::new("1.0.0-0", "1.0.0-1").colorize(),
             format!("{}{}", "1.0.0-", "1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new(&["2.4+20150115"], "2.4+20151223_1").colorize(),
+            VersionComparison::new("2.4+20150115", "2.4+20151223_1").colorize(),
             format!("{}{}", "2.4+", "20151223_1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new(&["9d"], "9e").colorize(),
+            VersionComparison::new("9d", "9e").colorize(),
             format!("{}{}", "9", "e".color(VERSION_COLOR.minor))
         );
         assert_eq!(
-            VersionComparison::new(&["3.1"], "3.1a").colorize(),
+            VersionComparison::new("3.1", "3.1a").colorize(),
             format!("{}{}", "3.1", "a".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new(&["3.1"], "3.2a").colorize(),
+            VersionComparison::new("3.1", "3.2a").colorize(),
             format!("{}{}", "3.", "2a".color(VERSION_COLOR.minor))
         );
         assert_eq!(
-            VersionComparison::new(&["r2917_1"], "r2999").colorize(),
+            VersionComparison::new("r2917_1", "r2999").colorize(),
             format!("{}{}", "", "r2999".color(VERSION_COLOR.major))
         );
         assert_eq!(
-            VersionComparison::new(&["3.4.1,3041"], "3.4.2,3043").colorize(),
+            VersionComparison::new("3.4.1,3041", "3.4.2,3043").colorize(),
             format!("{}{}", "3.4.", "2,3043".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new(&["3.1.1"], "3.1#2").colorize(),
+            VersionComparison::new("3.1.1", "3.1#2").colorize(),
             format!("{}{}", "3.1#", "2".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new(&["0.1.1~git0"], "0.1.1~git1").colorize(),
+            VersionComparison::new("0.1.1~git0", "0.1.1~git1").colorize(),
             format!("{}{}", "0.1.1~", "git1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new(&["2021,32.1.0:try2"], "2021,32.1.0:try3").colorize(),
+            VersionComparison::new("2021,32.1.0:try2", "2021,32.1.0:try3").colorize(),
             format!("{}{}", "2021,32.1.0:", "try3".color(VERSION_COLOR.other))
         );
     }
