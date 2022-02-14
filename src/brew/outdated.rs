@@ -75,7 +75,13 @@ impl Outdated {
                 },
             };
             let version = VersionComparison::new(latest_installed_version, current_version);
-            let colorized_current_version = version.colorize();
+            let colorized_current_version = match version.colorize() {
+                Ok(colorized) => colorized,
+                Err(error) => {
+                    println!("Failed to colorize the current version because of \"{error}\": {name}");
+                    continue;
+                },
+            };
             writer.serialize((name, latest_installed_version, "->", &colorized_current_version))?;
         }
         writer.flush().unwrap();

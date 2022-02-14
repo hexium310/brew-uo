@@ -31,42 +31,38 @@ impl VersionComparison {
         }
     }
 
-    pub fn colorize(&self) -> String {
-        Version::from(&self.current_version).map_or_else(
-            || self.current_version.color(VERSION_COLOR.major).to_string(),
-            |current_version| {
-                let current_version_parts = current_version.parts();
-                self.get_diff_position(current_version_parts).map_or_else(
-                    || current_version.to_string(),
-                    |position| {
-                        let (current_version_parts_without_change, between_delimiter) =
-                            position.checked_sub(1).map_or_else(
-                                || ("".to_owned(), "".to_owned()),
-                                |delimiters_position| {
-                                    (
-                                        self.build_version(..position, ..delimiters_position).unwrap(),
-                                        self.delimiters[delimiters_position].to_owned(),
-                                    )
-                                },
-                            );
-                        let current_version_parts_with_change = self
-                            .build_version(position.., position..)
-                            .unwrap()
-                            .color(match position {
-                                0 => VERSION_COLOR.major,
-                                1 => VERSION_COLOR.minor,
-                                _ => VERSION_COLOR.other,
-                            })
-                            .to_string();
+    pub fn colorize(&self) -> Result<String> {
+        let current_version = match Version::from(&self.current_version) {
+            Some(current_version) => current_version,
+            None => return Ok(self.current_version.color(VERSION_COLOR.major).to_string()),
+        };
 
-                        format!(
-                            "{}{}{}",
-                            current_version_parts_without_change, between_delimiter, current_version_parts_with_change,
-                        )
-                    },
-                )
-            },
-        )
+        let current_version_parts = current_version.parts();
+
+        let position = match self.get_diff_position(current_version_parts) {
+            Some(position) => position,
+            None => return Ok(current_version.to_string()),
+        };
+
+        let (current_version_parts_without_change, between_delimiter) = match position.checked_sub(1) {
+            Some(delimiters_position) => (
+                self.build_version(..position, ..delimiters_position)?,
+                self.delimiters[delimiters_position].to_owned(),
+            ),
+            None => ("".to_owned(), "".to_owned()),
+        };
+        let current_version_parts_with_change = self
+            .build_version(position.., position..)?
+            .color(match position {
+                0 => VERSION_COLOR.major,
+                1 => VERSION_COLOR.minor,
+                _ => VERSION_COLOR.other,
+            });
+
+        Ok(format!(
+            "{}{}{}",
+            current_version_parts_without_change, between_delimiter, current_version_parts_with_change,
+        ))
     }
 
     fn get_delimiters(version_str: &str) -> (Vec<String>, Vec<String>) {
@@ -207,59 +203,59 @@ mod tests {
     #[test]
     fn colorize_should_return_version_colored() {
         assert_eq!(
-            VersionComparison::new("1.0.0", "2.0.0").colorize(),
+            VersionComparison::new("1.0.0", "2.0.0").colorize().unwrap(),
             format!("{}{}", "", "2.0.0".color(VERSION_COLOR.major))
         );
         assert_eq!(
-            VersionComparison::new("1.0.0", "1.1.0").colorize(),
+            VersionComparison::new("1.0.0", "1.1.0").colorize().unwrap(),
             format!("{}{}", "1.", "1.0".color(VERSION_COLOR.minor))
         );
         assert_eq!(
-            VersionComparison::new("1.0.0", "1.0.1").colorize(),
+            VersionComparison::new("1.0.0", "1.0.1").colorize().unwrap(),
             format!("{}{}", "1.0.", "1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new("1.0.0_0", "1.0.0_1").colorize(),
+            VersionComparison::new("1.0.0_0", "1.0.0_1").colorize().unwrap(),
             format!("{}{}", "1.0.0_", "1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new("1.0.0-0", "1.0.0-1").colorize(),
+            VersionComparison::new("1.0.0-0", "1.0.0-1").colorize().unwrap(),
             format!("{}{}", "1.0.0-", "1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new("2.4+20150115", "2.4+20151223_1").colorize(),
+            VersionComparison::new("2.4+20150115", "2.4+20151223_1").colorize().unwrap(),
             format!("{}{}", "2.4+", "20151223_1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new("9d", "9e").colorize(),
+            VersionComparison::new("9d", "9e").colorize().unwrap(),
             format!("{}{}", "9", "e".color(VERSION_COLOR.minor))
         );
         assert_eq!(
-            VersionComparison::new("3.1", "3.1a").colorize(),
+            VersionComparison::new("3.1", "3.1a").colorize().unwrap(),
             format!("{}{}", "3.1", "a".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new("3.1", "3.2a").colorize(),
+            VersionComparison::new("3.1", "3.2a").colorize().unwrap(),
             format!("{}{}", "3.", "2a".color(VERSION_COLOR.minor))
         );
         assert_eq!(
-            VersionComparison::new("r2917_1", "r2999").colorize(),
+            VersionComparison::new("r2917_1", "r2999").colorize().unwrap(),
             format!("{}{}", "", "r2999".color(VERSION_COLOR.major))
         );
         assert_eq!(
-            VersionComparison::new("3.4.1,3041", "3.4.2,3043").colorize(),
+            VersionComparison::new("3.4.1,3041", "3.4.2,3043").colorize().unwrap(),
             format!("{}{}", "3.4.", "2,3043".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new("3.1.1", "3.1#2").colorize(),
+            VersionComparison::new("3.1.1", "3.1#2").colorize().unwrap(),
             format!("{}{}", "3.1#", "2".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new("0.1.1~git0", "0.1.1~git1").colorize(),
+            VersionComparison::new("0.1.1~git0", "0.1.1~git1").colorize().unwrap(),
             format!("{}{}", "0.1.1~", "git1".color(VERSION_COLOR.other))
         );
         assert_eq!(
-            VersionComparison::new("2021,32.1.0:try2", "2021,32.1.0:try3").colorize(),
+            VersionComparison::new("2021,32.1.0:try2", "2021,32.1.0:try3").colorize().unwrap(),
             format!("{}{}", "2021,32.1.0:", "try3".color(VERSION_COLOR.other))
         );
     }
