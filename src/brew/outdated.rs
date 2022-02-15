@@ -1,9 +1,9 @@
+use anyhow::{Context, Result};
 use itertools::Itertools;
 use prettytable::{format, Table};
 use serde::Deserialize;
 
 use crate::brew::version::*;
-use crate::error::Error;
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Json {
@@ -42,8 +42,8 @@ impl From<Cask> for Formula {
 }
 
 impl Outdated {
-    pub(crate) fn new(data: &str) -> serde_json::Result<Option<Self>> {
-        let Json { formulae, casks } = serde_json::from_str(data)?;
+    pub(crate) fn new(data: &str) -> Result<Option<Self>> {
+        let Json { formulae, casks } = serde_json::from_str(data).with_context(|| format!("Invalid JSON:\n{data}"))?;
         let casks = casks.into_iter().map_into().collect_vec();
         if formulae.is_empty() && casks.is_empty() {
             return Ok(None);
@@ -56,24 +56,38 @@ impl Outdated {
         Ok(Some(outdated))
     }
 
-    pub fn format(&self) -> Result<String, Error> {
-        let mut table = Table::from_csv_string(&self.to_csv()?)?;
+    pub fn format(&self) -> Result<String> {
+        let csv = self.to_csv().with_context(|| "Failed to make a CSV")?;
+        let mut table = Table::from_csv_string(&csv).with_context(|| format!("Failed to create a table:\n{csv}"))?;
         let table_format = format::FormatBuilder::new().padding(0, 4).build();
         table.set_format(table_format);
 
         Ok(table.to_string())
     }
 
-    fn to_csv(&self) -> Result<String, Error> {
+    fn to_csv(&self) -> Result<String> {
         let mut writer = csv::Writer::from_writer(vec![]);
-        for Formula {
-            name,
-            installed_versions,
-            current_version,
-        } in [&self.formulae, &self.casks].into_iter().flatten()
-        {
-            let version = VersionComparison::new(installed_versions, current_version);
-            writer.serialize((name, &version.latest_installed_version, "->", &version.colorize()))?;
+        for Formula { name, installed_versions, current_version } in itertools::chain(&self.formulae, &self.casks) {
+            let latest_installed_version = match installed_versions.last() {
+                Some(installed_version) => installed_version,
+                None => {
+                    eprintln!("[ERROR] There are no installed versions: {name}");
+                    continue;
+                },
+            };
+            let version = VersionComparison::new(latest_installed_version, current_version);
+            let colorized_current_version = match version.colorize() {
+                Ok(colorized) => colorized,
+                Err(error) => {
+                    eprintln!("[ERROR] Failed to colorize the current version because of \"{error}\": {name}");
+                    continue;
+                },
+            };
+
+            if writer.serialize((name, latest_installed_version, "->", &colorized_current_version)).is_err() {
+                eprintln!("[ERROR] Failed to serialize it as CSV: name = {name}, latest installed version = {latest_installed_version}, colorized current version = {colorized_current_version:?}");
+                continue;
+            }
         }
         writer.flush().unwrap();
         let csv = String::from_utf8(writer.into_inner()?)?;
