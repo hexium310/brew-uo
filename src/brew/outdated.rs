@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use itertools::Itertools;
 use prettytable::{format, Table};
 use serde::Deserialize;
@@ -43,7 +43,7 @@ impl From<Cask> for Formula {
 
 impl Outdated {
     pub(crate) fn new(data: &str) -> Result<Option<Self>> {
-        let Json { formulae, casks } = serde_json::from_str(data)?;
+        let Json { formulae, casks } = serde_json::from_str(data).with_context(|| format!("Invalid JSON:\n{data}"))?;
         let casks = casks.into_iter().map_into().collect_vec();
         if formulae.is_empty() && casks.is_empty() {
             return Ok(None);
@@ -57,7 +57,8 @@ impl Outdated {
     }
 
     pub fn format(&self) -> Result<String> {
-        let mut table = Table::from_csv_string(&self.to_csv()?)?;
+        let csv = self.to_csv().with_context(|| "Failed to make a CSV")?;
+        let mut table = Table::from_csv_string(&csv).with_context(|| format!("Failed to create a table:\n{csv}"))?;
         let table_format = format::FormatBuilder::new().padding(0, 4).build();
         table.set_format(table_format);
 

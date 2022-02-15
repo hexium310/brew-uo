@@ -124,12 +124,12 @@ impl VersionComparison {
         let version_parts = self
             .current_version_parts
             .get(version_range)
-            .with_context(|| format!("Index out of range"))?
+            .with_context(|| "Index out of range")?
             .iter();
         let delimiters = self
             .delimiters
             .get(delimiter_range)
-            .with_context(|| format!("Index out of range"))?;
+            .with_context(|| "Index out of range")?;
 
         Ok(version_parts.interleave(delimiters).join(""))
     }
