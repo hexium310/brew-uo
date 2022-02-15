@@ -13,6 +13,7 @@ pub struct VersionComparison {
     pub installed_version: String,
     pub current_version: String,
     pub delimiters: Vec<String>,
+    // For building version. If it uses version_compare::Part, leading zeros are removed in each part.
     pub current_version_parts: Vec<String>,
 }
 
@@ -21,7 +22,7 @@ impl VersionComparison {
         installed_version: &str,
         current_version: &str,
     ) -> VersionComparison {
-        let (current_version_parts, delimiters) = VersionComparison::get_delimiters(current_version);
+        let (current_version_parts, delimiters) = VersionComparison::split(current_version);
 
         VersionComparison {
             installed_version: installed_version.to_owned(),
@@ -37,21 +38,19 @@ impl VersionComparison {
             None => return Ok(self.current_version.color(VERSION_COLOR.major).to_string()),
         };
 
-        let current_version_parts = current_version.parts();
-
-        let position = match self.get_diff_position(current_version_parts) {
+        let position = match self.get_diff_position(current_version.parts()) {
             Some(position) => position,
             None => return Ok(current_version.to_string()),
         };
 
-        let (current_version_parts_without_change, between_delimiter) = match position.checked_sub(1) {
+        let (backward, between_delimiter) = match position.checked_sub(1) {
             Some(delimiters_position) => (
                 self.build_version(..position, ..delimiters_position)?,
                 self.delimiters[delimiters_position].to_owned(),
             ),
             None => ("".to_owned(), "".to_owned()),
         };
-        let current_version_parts_with_change = self
+        let forward = self
             .build_version(position.., position..)?
             .color(match position {
                 0 => VERSION_COLOR.major,
@@ -61,53 +60,55 @@ impl VersionComparison {
 
         Ok(format!(
             "{}{}{}",
-            current_version_parts_without_change, between_delimiter, current_version_parts_with_change,
+            backward, between_delimiter, forward,
         ))
     }
 
-    fn get_delimiters(version_str: &str) -> (Vec<String>, Vec<String>) {
-        Version::from(version_str).map_or_else(
-            || (vec![], vec![]),
-            |version| {
-                let mut delimiters = Vec::new();
-                let mut parts = Vec::new();
+    fn split(version_str: &str) -> (Vec<String>, Vec<String>) {
+        let version = match Version::from(version_str) {
+            Some(version) => version,
+            None => return (vec![], vec![]),
+        };
 
-                for part in version.parts().iter() {
-                    let backward = parts.clone().into_iter().interleave(delimiters.clone()).join("");
-                    let current_and_forward = version_str.strip_prefix(&backward).unwrap_or_default();
-                    let part = current_and_forward.find(|c| c != '0').map_or_else(
-                        || part.to_string(),
-                        |position| {
-                            let times = if position == current_and_forward.find(|c: char| !c.is_ascii_digit()).unwrap_or(position) {
-                                0
-                            } else {
-                                position
-                            };
-                            "0".repeat(times) + &part.to_string()
-                        },
-                    );
+        let mut delimiters = Vec::new();
+        let mut parts = Vec::new();
 
-                    parts.push(part.clone());
+        for part in version.parts() {
+            let backward = parts.clone().into_iter().interleave(delimiters.clone()).join("");
+            let current_and_forward = version_str.strip_prefix(&backward).unwrap_or_default();
+            // Supply leading zeros because version_compare::Part removes them.
+            let part = match current_and_forward.find(|c| c != '0') {
+                Some(position) => {
+                    let times = if position == current_and_forward.find(|c: char| !c.is_ascii_digit()).unwrap_or(position) {
+                        0
+                    } else {
+                        position
+                    };
+                    "0".repeat(times) + &part.to_string()
+                },
+                None => part.to_string(),
+            };
 
-                    if let Some(delimiter) = current_and_forward.chars().nth(part.len()) {
-                        let delimiter = if delimiter.is_ascii_alphabetic() {
-                            "".to_owned()
-                        } else {
-                            delimiter.to_string()
-                        };
-                        delimiters.push(delimiter);
-                    }
-                }
-                (parts, delimiters)
-            },
-        )
+            parts.push(part.clone());
+
+            if let Some(delimiter) = current_and_forward.chars().nth(part.len()) {
+                let delimiter = if delimiter.is_ascii_alphabetic() {
+                    "".to_owned()
+                } else {
+                    delimiter.to_string()
+                };
+                delimiters.push(delimiter);
+            }
+        }
+
+        (parts, delimiters)
     }
 
     fn get_diff_position(&self, current_version_parts: &[Part]) -> Option<usize> {
-        Version::from(&self.installed_version).and_then(|newest_current_version| {
+        Version::from(&self.installed_version).and_then(|installed_version| {
             current_version_parts
                 .iter()
-                .zip_longest(newest_current_version.parts().iter())
+                .zip_longest(installed_version.parts())
                 .position(|v| match v {
                     Both(left, right) => {
                         compare_to(&left.to_string(), &right.to_string(), Cmp::Ne).unwrap_or_else(|_| left != right)
@@ -153,16 +154,16 @@ mod tests {
     }
 
     #[test]
-    fn generate_delimiters_should_return_delimiters_list() {
+    fn split_should_return_tuple_of_version_parts_list_and_delimiters_list() {
         assert_eq!(
-            VersionComparison::get_delimiters("1.2_3-4"),
+            VersionComparison::split("1.2_3-4"),
             (
                 vec!["1".to_owned(), "2".to_owned(), "3".to_owned(), "4".to_owned()],
                 vec![".".to_owned(), "_".to_owned(), "-".to_owned()],
             )
         );
         assert_eq!(
-            VersionComparison::get_delimiters("0001.0002a.0"),
+            VersionComparison::split("0001.0002a.0"),
             (
                 vec!["0001".to_owned(), "0002".to_owned(), "a".to_owned(), "0".to_owned()],
                 vec![".".to_owned(), "".to_owned(), ".".to_owned()],
@@ -171,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn find_different_part_position_should_return_position() {
+    fn get_diff_position_should_return_position() {
         let (version, ref parts) = before("2.0", "1.0");
         assert_eq!(version.get_diff_position(parts), Some(0));
 

@@ -186,7 +186,7 @@ mod tests {
     "#};
 
     #[test]
-    fn new_should_returns_outdated_struct() {
+    fn new_should_return_outdated_struct() {
         assert_eq!(
             Outdated::new(DATA).unwrap().unwrap(),
             Outdated {
@@ -256,7 +256,7 @@ mod tests {
     }
 
     #[test]
-    fn to_csv_should_returns_csv_with_color() {
+    fn to_csv_should_return_csv_with_color() {
         use colored::Colorize;
 
         let outdated = Outdated::new(DATA).unwrap().unwrap();
@@ -287,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn format_should_returns_tabular_formulae() {
+    fn format_should_return_tabular_formulae() {
         use colored::Colorize;
 
         let outdated = Outdated::new(DATA).unwrap().unwrap();
