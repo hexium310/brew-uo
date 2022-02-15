@@ -22,7 +22,7 @@ fn main() {
         match outdated.format() {
             Ok(output) => {
                 println!("{} {}", "==>".blue(), "Oudated Formulae".bold());
-                print!("{}", output);
+                println!("{}", output);
             },
             Err(err) => {
                 eprintln!("[ERROR] Failed to build outdated formulae: {err:?}");

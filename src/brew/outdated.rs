@@ -62,7 +62,7 @@ impl Outdated {
         let table_format = format::FormatBuilder::new().padding(0, 4).build();
         table.set_format(table_format);
 
-        Ok(table.to_string())
+        Ok(table.to_string().lines().map(|v| v.trim_end()).join("\n"))
     }
 
     fn to_csv(&self) -> Result<String> {
@@ -293,41 +293,41 @@ sequel-ace,"3.4.1,3041",->,"3.4.{}"
         assert_eq!(
             outdated.format().unwrap(),
             format!(
-                "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
+                "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
                 format!(
-                    "curl          7.80.0                     ->    7.80.0_{}    ",
+                    "curl          7.80.0                     ->    7.80.0_{}",
                     "1".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "jpeg          9d                         ->    9{}    ",
+                    "jpeg          9d                         ->    9{}",
                     "e".color(VERSION_COLOR.minor)
                 ),
                 format!(
-                    "php           8.0.12                     ->    8.0.{}    ",
+                    "php           8.0.12                     ->    8.0.{}",
                     "13".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "picat         3.1.1                      ->    3.1#{}    ",
+                    "picat         3.1.1                      ->    3.1#{}",
                     "2".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "srmio         0.1.0                      ->    0.1.{}    ",
+                    "srmio         0.1.0                      ->    0.1.{}",
                     "1~git1".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "atok          2021,32.1.0:try2           ->    2021,32.1.0:{}    ",
+                    "atok          2021,32.1.0:try2           ->    2021,32.1.0:{}",
                     "try3".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "duplicati     2.0.6.1,beta:2021-05-03    ->    2.0.6.{}    ",
+                    "duplicati     2.0.6.1,beta:2021-05-03    ->    2.0.6.{}",
                     "3,beta:2021-06-17".color(VERSION_COLOR.other)
                 ),
                 format!(
-                    "powershell    7.1.0                      ->    7.{}    ",
+                    "powershell    7.1.0                      ->    7.{}",
                     "2.0".color(VERSION_COLOR.minor)
                 ),
                 format!(
-                    "sequel-ace    3.4.1,3041                 ->    3.4.{}    ",
+                    "sequel-ace    3.4.1,3041                 ->    3.4.{}",
                     "2,3043".color(VERSION_COLOR.other)
                 )
             )
