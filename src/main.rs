@@ -12,7 +12,7 @@ use crate::brew::*;
 
 fn main() {
     if let Err(err) = run_update() {
-        println!("command error: {}", err);
+        eprintln!("[ERROR] Failed to execute command: {err}");
     }
 
     let outdated_result = run_outdated().expect("brew oudated --json failed");
@@ -25,7 +25,7 @@ fn main() {
                 print!("{}", output);
             },
             Err(err) => {
-                println!("outdated error: {:?}", err);
+                eprintln!("[ERROR] Failed to build outdated formulae: {err:?}");
             },
         }
     }

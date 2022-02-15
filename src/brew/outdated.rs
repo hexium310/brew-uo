@@ -70,7 +70,7 @@ impl Outdated {
             let latest_installed_version = match installed_versions.last() {
                 Some(installed_version) => installed_version,
                 None => {
-                    println!("There are no installed versions: {name}");
+                    eprintln!("[ERROR] There are no installed versions: {name}");
                     continue;
                 },
             };
@@ -78,7 +78,7 @@ impl Outdated {
             let colorized_current_version = match version.colorize() {
                 Ok(colorized) => colorized,
                 Err(error) => {
-                    println!("Failed to colorize the current version because of \"{error}\": {name}");
+                    eprintln!("[ERROR] Failed to colorize the current version because of \"{error}\": {name}");
                     continue;
                 },
             };
