@@ -82,7 +82,11 @@ impl Outdated {
                     continue;
                 },
             };
-            writer.serialize((name, latest_installed_version, "->", &colorized_current_version))?;
+
+            if writer.serialize((name, latest_installed_version, "->", &colorized_current_version)).is_err() {
+                eprintln!("[ERROR] Failed to serialize it as CSV: name = {name}, latest installed version = {latest_installed_version}, colorized current version = {colorized_current_version:?}");
+                continue;
+            }
         }
         writer.flush().unwrap();
         let csv = String::from_utf8(writer.into_inner()?)?;
