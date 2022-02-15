@@ -89,7 +89,6 @@ impl Outdated {
                 continue;
             }
         }
-        writer.flush().unwrap();
         let csv = String::from_utf8(writer.into_inner()?)?;
         Ok(csv)
     }
