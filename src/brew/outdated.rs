@@ -96,12 +96,13 @@ impl Outdated {
 
 #[cfg(test)]
 mod tests {
+    use indoc::{formatdoc, indoc};
     use pretty_assertions::assert_eq;
 
     use super::*;
     use crate::color::VERSION_COLOR;
 
-    const DATA: &str = r#"
+    const DATA: &str = indoc! {r#"
         {
           "formulae": [
             {
@@ -182,7 +183,7 @@ mod tests {
             }
           ]
         }
-    "#;
+    "#};
 
     #[test]
     fn new_should_returns_outdated_struct() {
@@ -241,7 +242,7 @@ mod tests {
             }
         );
 
-        let data = r#"
+        let data = indoc! {r#"
             {
               "formulae": [
 
@@ -250,7 +251,7 @@ mod tests {
 
               ]
             }
-        "#;
+        "#};
         assert!(Outdated::new(data).unwrap().is_none());
     }
 
@@ -261,27 +262,27 @@ mod tests {
         let outdated = Outdated::new(DATA).unwrap().unwrap();
         assert_eq!(
             outdated.to_csv().unwrap(),
-            format!(
-                r#"curl,7.80.0,->,7.80.0_{}
-jpeg,9d,->,9{}
-php,8.0.12,->,8.0.{}
-picat,3.1.1,->,3.1#{}
-srmio,0.1.0,->,0.1.{}
-atok,"2021,32.1.0:try2",->,"2021,32.1.0:{}"
-duplicati,"2.0.6.1,beta:2021-05-03",->,"2.0.6.{}"
-powershell,7.1.0,->,7.{}
-sequel-ace,"3.4.1,3041",->,"3.4.{}"
-"#,
-                "1".color(VERSION_COLOR.other),
-                "e".color(VERSION_COLOR.minor),
-                "13".color(VERSION_COLOR.other),
-                "2".color(VERSION_COLOR.other),
-                "1~git1".color(VERSION_COLOR.other),
-                "try3".color(VERSION_COLOR.other),
-                "3,beta:2021-06-17".color(VERSION_COLOR.other),
-                "2.0".color(VERSION_COLOR.minor),
-                "2,3043".color(VERSION_COLOR.other)
-            )
+            formatdoc! {r#"
+                curl,7.80.0,->,7.80.0_{curl}
+                jpeg,9d,->,9{jpeg}
+                php,8.0.12,->,8.0.{php}
+                picat,3.1.1,->,3.1#{picat}
+                srmio,0.1.0,->,0.1.{srmio}
+                atok,"2021,32.1.0:try2",->,"2021,32.1.0:{atok}"
+                duplicati,"2.0.6.1,beta:2021-05-03",->,"2.0.6.{duplicati}"
+                powershell,7.1.0,->,7.{powershell}
+                sequel-ace,"3.4.1,3041",->,"3.4.{sequel_ace}"
+                "#,
+                curl = "1".color(VERSION_COLOR.other),
+                jpeg = "e".color(VERSION_COLOR.minor),
+                php = "13".color(VERSION_COLOR.other),
+                picat = "2".color(VERSION_COLOR.other),
+                srmio = "1~git1".color(VERSION_COLOR.other),
+                atok = "try3".color(VERSION_COLOR.other),
+                duplicati = "3,beta:2021-06-17".color(VERSION_COLOR.other),
+                powershell = "2.0".color(VERSION_COLOR.minor),
+                sequel_ace = "2,3043".color(VERSION_COLOR.other),
+            }
         );
     }
 
@@ -292,45 +293,26 @@ sequel-ace,"3.4.1,3041",->,"3.4.{}"
         let outdated = Outdated::new(DATA).unwrap().unwrap();
         assert_eq!(
             outdated.format().unwrap(),
-            format!(
-                "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
-                format!(
-                    "curl          7.80.0                     ->    7.80.0_{}",
-                    "1".color(VERSION_COLOR.other)
-                ),
-                format!(
-                    "jpeg          9d                         ->    9{}",
-                    "e".color(VERSION_COLOR.minor)
-                ),
-                format!(
-                    "php           8.0.12                     ->    8.0.{}",
-                    "13".color(VERSION_COLOR.other)
-                ),
-                format!(
-                    "picat         3.1.1                      ->    3.1#{}",
-                    "2".color(VERSION_COLOR.other)
-                ),
-                format!(
-                    "srmio         0.1.0                      ->    0.1.{}",
-                    "1~git1".color(VERSION_COLOR.other)
-                ),
-                format!(
-                    "atok          2021,32.1.0:try2           ->    2021,32.1.0:{}",
-                    "try3".color(VERSION_COLOR.other)
-                ),
-                format!(
-                    "duplicati     2.0.6.1,beta:2021-05-03    ->    2.0.6.{}",
-                    "3,beta:2021-06-17".color(VERSION_COLOR.other)
-                ),
-                format!(
-                    "powershell    7.1.0                      ->    7.{}",
-                    "2.0".color(VERSION_COLOR.minor)
-                ),
-                format!(
-                    "sequel-ace    3.4.1,3041                 ->    3.4.{}",
-                    "2,3043".color(VERSION_COLOR.other)
-                )
-            )
+            formatdoc! {"
+                curl          7.80.0                     ->    7.80.0_{curl}
+                jpeg          9d                         ->    9{jpeg}
+                php           8.0.12                     ->    8.0.{php}
+                picat         3.1.1                      ->    3.1#{picat}
+                srmio         0.1.0                      ->    0.1.{srmio}
+                atok          2021,32.1.0:try2           ->    2021,32.1.0:{atok}
+                duplicati     2.0.6.1,beta:2021-05-03    ->    2.0.6.{duplicati}
+                powershell    7.1.0                      ->    7.{powershell}
+                sequel-ace    3.4.1,3041                 ->    3.4.{sequel_ace}",
+                curl = "1".color(VERSION_COLOR.other),
+                jpeg = "e".color(VERSION_COLOR.minor),
+                php = "13".color(VERSION_COLOR.other),
+                picat = "2".color(VERSION_COLOR.other),
+                srmio = "1~git1".color(VERSION_COLOR.other),
+                atok = "try3".color(VERSION_COLOR.other),
+                duplicati = "3,beta:2021-06-17".color(VERSION_COLOR.other),
+                powershell = "2.0".color(VERSION_COLOR.minor),
+                sequel_ace = "2,3043".color(VERSION_COLOR.other),
+            }
         );
     }
 }
