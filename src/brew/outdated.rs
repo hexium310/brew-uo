@@ -263,20 +263,20 @@ mod tests {
         assert_eq!(
             outdated.to_csv().unwrap(),
             formatdoc! {r#"
-                curl,7.80.0,->,7.80.0_{curl}
-                jpeg,9d,->,9{jpeg}
+                curl,7.80.0,->,7.80.0{curl}
+                jpeg,9d,->,{jpeg}
                 php,8.0.12,->,8.0.{php}
-                picat,3.1.1,->,3.1#{picat}
+                picat,3.1.1,->,3.1{picat}
                 srmio,0.1.0,->,0.1.{srmio}
                 atok,"2021,32.1.0:try2",->,"2021,32.1.0:{atok}"
                 duplicati,"2.0.6.1,beta:2021-05-03",->,"2.0.6.{duplicati}"
                 powershell,7.1.0,->,7.{powershell}
                 sequel-ace,"3.4.1,3041",->,"3.4.{sequel_ace}"
                 "#,
-                curl = "1".color(VERSION_COLOR.other),
-                jpeg = "e".color(VERSION_COLOR.minor),
+                curl = "_1".color(VERSION_COLOR.other),
+                jpeg = "9e".color(VERSION_COLOR.major),
                 php = "13".color(VERSION_COLOR.other),
-                picat = "2".color(VERSION_COLOR.other),
+                picat = "#2".color(VERSION_COLOR.other),
                 srmio = "1~git1".color(VERSION_COLOR.other),
                 atok = "try3".color(VERSION_COLOR.other),
                 duplicati = "3,beta:2021-06-17".color(VERSION_COLOR.other),
@@ -294,19 +294,19 @@ mod tests {
         assert_eq!(
             outdated.format().unwrap(),
             formatdoc! {"
-                curl          7.80.0                     ->    7.80.0_{curl}
-                jpeg          9d                         ->    9{jpeg}
+                curl          7.80.0                     ->    7.80.0{curl}
+                jpeg          9d                         ->    {jpeg}
                 php           8.0.12                     ->    8.0.{php}
-                picat         3.1.1                      ->    3.1#{picat}
+                picat         3.1.1                      ->    3.1{picat}
                 srmio         0.1.0                      ->    0.1.{srmio}
                 atok          2021,32.1.0:try2           ->    2021,32.1.0:{atok}
                 duplicati     2.0.6.1,beta:2021-05-03    ->    2.0.6.{duplicati}
                 powershell    7.1.0                      ->    7.{powershell}
                 sequel-ace    3.4.1,3041                 ->    3.4.{sequel_ace}",
-                curl = "1".color(VERSION_COLOR.other),
-                jpeg = "e".color(VERSION_COLOR.minor),
+                curl = "_1".color(VERSION_COLOR.other),
+                jpeg = "9e".color(VERSION_COLOR.major),
                 php = "13".color(VERSION_COLOR.other),
-                picat = "2".color(VERSION_COLOR.other),
+                picat = "#2".color(VERSION_COLOR.other),
                 srmio = "1~git1".color(VERSION_COLOR.other),
                 atok = "try3".color(VERSION_COLOR.other),
                 duplicati = "3,beta:2021-06-17".color(VERSION_COLOR.other),
