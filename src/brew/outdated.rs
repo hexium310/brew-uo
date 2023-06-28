@@ -27,7 +27,7 @@ pub struct Formula {
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Cask {
     name: String,
-    installed_versions: String,
+    installed_versions: Vec<String>,
     current_version: String,
 }
 
@@ -35,7 +35,7 @@ impl From<Cask> for Formula {
     fn from(c: Cask) -> Self {
         Formula {
             name: c.name,
-            installed_versions: c.installed_versions.split(", ").map_into().collect(),
+            installed_versions: c.installed_versions,
             current_version: c.current_version,
         }
     }
@@ -155,28 +155,28 @@ mod tests {
           "casks": [
             {
               "name": "atok",
-              "installed_versions": "2021,32.1.0:try2",
+              "installed_versions": ["2021,32.1.0:try2"],
               "current_version": "2021,32.1.0:try3",
               "pinned": false,
               "pinned_version": null
             },
             {
               "name": "duplicati",
-              "installed_versions": "2.0.6.1,beta:2021-05-03",
+              "installed_versions": ["2.0.6.1,beta:2021-05-03"],
               "current_version": "2.0.6.3,beta:2021-06-17",
               "pinned": false,
               "pinned_version": null
             },
             {
               "name": "powershell",
-              "installed_versions": "7.1.0",
+              "installed_versions": ["7.1.0"],
               "current_version": "7.2.0",
               "pinned": false,
               "pinned_version": null
             },
             {
               "name": "sequel-ace",
-              "installed_versions": "3.4.0,3038, 3.4.1,3041",
+              "installed_versions": ["3.4.0,3038", "3.4.1,3041"],
               "current_version": "3.4.2,3043",
               "pinned": false,
               "pinned_version": null
